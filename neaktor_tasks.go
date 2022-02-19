@@ -228,7 +228,7 @@ func (t *Task) UpdateStatus(status ModelStatus) error {
 	if err != nil {
 		return fmt.Errorf("marshaling error: %w", err)
 	}
-	response, err := t.model.neaktor.runner.PutJson(HttpRunner.JsonRequestData{
+	response, err := t.model.neaktor.runner.PostJson(HttpRunner.JsonRequestData{
 		Url:   fmt.Sprintf(API_SERVER+"/v1/tasks/%d/status/change", t.id),
 		Value: updateTaskStatusRequestBytes,
 		Headers: map[string]string{
