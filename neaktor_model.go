@@ -77,6 +77,8 @@ func (m *Model) GetAllFields() (fields map[string]ModelField) {
 }
 
 func (m *Model) GetStatuses(titles []string) (statuses map[string]ModelStatus, err error) {
+	statuses = make(map[string]ModelStatus, 0)
+
 	for _, modelStatus := range m.statuses {
 		for _, title := range titles {
 			if strings.EqualFold(modelStatus.Name, title) {
@@ -89,6 +91,8 @@ func (m *Model) GetStatuses(titles []string) (statuses map[string]ModelStatus, e
 }
 
 func (m *Model) GetFields(titles []string) (fields map[string]ModelField, err error) {
+	fields = make(map[string]ModelField, 0)
+
 	for _, modelField := range m.fields {
 		for _, title := range titles {
 			if strings.EqualFold(modelField.Name, title) {
