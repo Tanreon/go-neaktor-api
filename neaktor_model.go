@@ -47,10 +47,12 @@ var ErrModelStatusNotFound = errors.New("MODEL_STATUS_NOT_FOUND")
 var ErrModelFieldNotFound = errors.New("MODEL_FIELD_NOT_FOUND")
 
 type IModel interface {
+	GetAllStatuses() (statuses map[string]ModelStatus)
+	GetAllFields() (fields map[string]ModelField)
+	GetStatuses(titles []string) (statuses map[string]ModelStatus, err error)
+	GetFields(titles []string) (fields map[string]ModelField, err error)
 	GetStatus(title string) (status ModelStatus, err error)
 	GetField(title string) (field ModelField, err error)
-	GetStatuses() (statuses map[string]ModelStatus)
-	GetFields() (fields map[string]ModelField)
 	GetTasksByStatus(status ModelStatus) (tasks []ITask, err error)
 	GetTasksByStatuses(statuses []ModelStatus) (tasks []ITask, err error)
 	GetTasksByStatusAndFields(status ModelStatus, dataFields []TaskField) (tasks []ITask, err error)
@@ -64,6 +66,38 @@ func NewModel(neaktor *Neaktor, modelId string, statuses map[string]ModelStatus,
 		statuses: statuses,
 		fields:   fields,
 	}
+}
+
+func (m *Model) GetAllStatuses() (statuses map[string]ModelStatus) {
+	return m.statuses
+}
+
+func (m *Model) GetAllFields() (fields map[string]ModelField) {
+	return m.fields
+}
+
+func (m *Model) GetStatuses(titles []string) (statuses map[string]ModelStatus, err error) {
+	for _, modelStatus := range m.statuses {
+		for _, title := range titles {
+			if strings.EqualFold(modelStatus.Name, title) {
+				statuses[title] = modelStatus
+			}
+		}
+	}
+
+	return statuses, ErrModelStatusNotFound
+}
+
+func (m *Model) GetFields(titles []string) (fields map[string]ModelField, err error) {
+	for _, modelField := range m.fields {
+		for _, title := range titles {
+			if strings.EqualFold(modelField.Name, title) {
+				fields[title] = modelField
+			}
+		}
+	}
+
+	return fields, ErrModelFieldNotFound
 }
 
 func (m *Model) GetStatus(title string) (status ModelStatus, err error) {
@@ -84,14 +118,6 @@ func (m *Model) GetField(title string) (field ModelField, err error) {
 	}
 
 	return field, ErrModelFieldNotFound
-}
-
-func (m *Model) GetStatuses() (statuses map[string]ModelStatus) {
-	return m.statuses
-}
-
-func (m *Model) GetFields() (fields map[string]ModelField) {
-	return m.fields
 }
 
 //
