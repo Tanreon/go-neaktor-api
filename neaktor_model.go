@@ -87,7 +87,11 @@ func (m *Model) GetStatuses(titles []string) (statuses map[string]ModelStatus, e
 		}
 	}
 
-	return statuses, ErrModelStatusNotFound
+	if len(statuses) <= 0 {
+		return statuses, ErrModelStatusNotFound
+	}
+
+	return statuses, err
 }
 
 func (m *Model) GetFields(titles []string) (fields map[string]ModelField, err error) {
@@ -101,7 +105,11 @@ func (m *Model) GetFields(titles []string) (fields map[string]ModelField, err er
 		}
 	}
 
-	return fields, ErrModelFieldNotFound
+	if len(fields) <= 0 {
+		return fields, ErrModelFieldNotFound
+	}
+
+	return fields, err
 }
 
 func (m *Model) GetStatus(title string) (status ModelStatus, err error) {
