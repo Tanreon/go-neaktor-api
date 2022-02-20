@@ -61,41 +61,6 @@ func (t *Task) GetField(modelField ModelField) (taskField TaskField, err error) 
 	return taskField, ErrTaskFieldNotFound
 }
 
-//func (n *Neaktor) UpdateTask(taskId int, fields []UpdateTaskField) (err error) {
-//	n.apiLimiter.Take()
-//
-//	updateTasksRequest := UpdateTaskRequest{
-//		Fields: fields,
-//	}
-//
-//	updateTasksRequestBytes, err := json.Marshal(updateTasksRequest)
-//	if err != nil {
-//		return fmt.Errorf("[json.Marshal] error: %w", err)
-//	}
-//
-//	response, err := n.runner.PutJson(HttpRunner.JsonRequestData{
-//		Url:   fmt.Sprintf(API_SERVER+"/v1/tasks/%d", taskId),
-//		Value: updateTasksRequestBytes,
-//		Headers: map[string]string{
-//			"Authorization": n.token,
-//		},
-//	})
-//	if err != nil {
-//		return fmt.Errorf("/v1/tasks/%d response error: %w", taskId, err)
-//	}
-//
-//	var updateTasksResponse UpdateTasksResponse
-//	if err := json.Unmarshal(response.Body(), &updateTasksResponse); err != nil {
-//		log.Debugf("response code: %d, response body: %v", response.StatusCode(), string(response.Body()))
-//		return fmt.Errorf("unmarshal error: %w", err)
-//	}
-//	if len(updateTasksResponse.Code) > 0 {
-//		return fmt.Errorf("server error: %s", updateTasksResponse.Message)
-//	}
-//
-//	return nil
-//}
-
 func (t *Task) UpdateFields(fields []TaskField) error {
 	//type UpdateTaskFieldsCurrencyValue struct {
 	//	Value    float64 `json:"value,omitempty"`
@@ -143,13 +108,14 @@ func (t *Task) UpdateFields(fields []TaskField) error {
 	if err != nil {
 		return fmt.Errorf("marshaling error: %w", err)
 	}
-	response, err := t.model.neaktor.runner.PutJson(HttpRunner.JsonRequestData{
-		Url:   fmt.Sprintf(API_SERVER+"/v1/tasks/%d", t.id),
-		Value: updateTasksRequestBytes,
-		Headers: map[string]string{
-			"Authorization": t.model.neaktor.token,
-		},
+
+	jsonRequestData := HttpRunner.NewJsonRequestData(fmt.Sprintf(API_SERVER+"/v1/tasks/%d", t.id))
+	jsonRequestData.SetHeaders(map[string]string{
+		"Authorization": t.model.neaktor.token,
 	})
+	jsonRequestData.SetValue(updateTasksRequestBytes)
+
+	response, err := t.model.neaktor.runner.PutJson(jsonRequestData)
 	if err != nil {
 		return fmt.Errorf("/v1/tasks/%d response error: %w", t.id, err)
 	}
@@ -165,41 +131,6 @@ func (t *Task) UpdateFields(fields []TaskField) error {
 
 	return err
 }
-
-//func (n *Neaktor) UpdateTaskStatus(taskId int, statusId string) (err error) {
-//	n.apiLimiter.Take()
-//
-//	updateTaskStatusRequest := UpdateTaskStatusRequest{
-//		Status: statusId,
-//	}
-//
-//	updateTaskStatusRequestBytes, err := json.Marshal(updateTaskStatusRequest)
-//	if err != nil {
-//		return fmt.Errorf("[json.Marshal] error: %w", err)
-//	}
-//
-//	response, err := n.runner.PostJson(HttpRunner.JsonRequestData{
-//		Url:   fmt.Sprintf(API_SERVER+"/v1/tasks/%d/status/change", taskId),
-//		Value: updateTaskStatusRequestBytes,
-//		Headers: map[string]string{
-//			"Authorization": n.token,
-//		},
-//	})
-//	if err != nil {
-//		return fmt.Errorf("/v1/tasks/%d/status/change response error: %w", taskId, err)
-//	}
-//
-//	var updateTaskStatusResponse UpdateTaskStatusResponse
-//	if err := json.Unmarshal(response.Body(), &updateTaskStatusResponse); err != nil {
-//		log.Debugf("response code: %d, response body: %v", response.StatusCode(), string(response.Body()))
-//		return fmt.Errorf("unmarshal error: %w", err)
-//	}
-//	if len(updateTaskStatusResponse.Code) > 0 {
-//		return fmt.Errorf("server error: %s", updateTaskStatusResponse.Message)
-//	}
-//
-//	return nil
-//}
 
 func (t *Task) UpdateStatus(status ModelStatus) error {
 	type UpdateTaskStatusAssignee struct {
@@ -228,13 +159,14 @@ func (t *Task) UpdateStatus(status ModelStatus) error {
 	if err != nil {
 		return fmt.Errorf("marshaling error: %w", err)
 	}
-	response, err := t.model.neaktor.runner.PostJson(HttpRunner.JsonRequestData{
-		Url:   fmt.Sprintf(API_SERVER+"/v1/tasks/%d/status/change", t.id),
-		Value: updateTaskStatusRequestBytes,
-		Headers: map[string]string{
-			"Authorization": t.model.neaktor.token,
-		},
+
+	jsonRequestData := HttpRunner.NewJsonRequestData(fmt.Sprintf(API_SERVER+"/v1/tasks/%d/status/change", t.id))
+	jsonRequestData.SetHeaders(map[string]string{
+		"Authorization": t.model.neaktor.token,
 	})
+	jsonRequestData.SetValue(updateTaskStatusRequestBytes)
+
+	response, err := t.model.neaktor.runner.PostJson(jsonRequestData)
 	if err != nil {
 		return fmt.Errorf("/v1/tasks/%d/status/change response error: %w", t.id, err)
 	}
@@ -270,13 +202,13 @@ func (t *Task) AddComment(message string) error {
 		return fmt.Errorf("marshaling error: %w", err)
 	}
 
-	response, err := t.model.neaktor.runner.PostJson(HttpRunner.JsonRequestData{
-		Url:   fmt.Sprintf(API_SERVER+"/v1/comments/%d", t.id),
-		Value: createCommentToTaskRequestBytes,
-		Headers: map[string]string{
-			"Authorization": t.model.neaktor.token,
-		},
+	jsonRequestData := HttpRunner.NewJsonRequestData(fmt.Sprintf(API_SERVER+"/v1/comments/%d", t.id))
+	jsonRequestData.SetHeaders(map[string]string{
+		"Authorization": t.model.neaktor.token,
 	})
+	jsonRequestData.SetValue(createCommentToTaskRequestBytes)
+
+	response, err := t.model.neaktor.runner.PostJson(jsonRequestData)
 	if err != nil {
 		return fmt.Errorf("/v1/comments/%d response error: %w", t.id, err)
 	}

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"go.uber.org/ratelimit"
@@ -17,11 +16,17 @@ const API_SERVER = "https://api.neaktor.com"
 const MODEL_CACHE_TIME = time.Minute * 30
 
 var ErrCodeUnknown = errors.New("UNKNOWN_ERROR")
-var ErrCode403 = errors.New("403 FORBIDDEN")
-var ErrCode404 = errors.New("404 NOT_FOUND")
-var ErrCode422 = errors.New("422 UNPROCESSABLE_ENTITY")
-var ErrCode429 = errors.New("429 TOO_MANY_REQUESTS")
+var ErrCode403 = errors.New("403")
+var ErrCode404 = errors.New("404")
+var ErrCode422 = errors.New("422")
+var ErrCode429 = errors.New("429 TOO_MANY_REQUESTS") // This and below not typo error
 var ErrCode500 = errors.New("500 INTERNAL_SERVER_ERROR")
+var ErrModelNotFound = errors.New("MODEL_NOT_FOUND")
+
+type ModelCache struct {
+	lastUpdatedAt time.Time
+	model         IModel
+}
 
 type NeaktorErrorResponse struct {
 	Type             string `json:"type"` // error type
@@ -42,18 +47,6 @@ type Neaktor struct {
 
 type INeaktor interface {
 	GetModelByTitle(title string) (model IModel, err error)
-	//GetModelInfo(title string) (modelId string, statusId []ModelStatus, modelFields []ModelField, err error)
-	//GetModelRoutingsByModel(modelId, statusId string) (userId int, err error)
-	//CanUpdateModel() (canUpdate bool)
-
-	//CreateCommentByTask(taskId int, comment string) (err error)
-	//
-	//GetModelTasksByStatus(modelId, statusId string) (tasks []TasksResponseData, err error)
-	//GetModelTasksByStatuses(modelId string, statusId []string) (tasks []TasksResponseData, err error)
-	//GetModelTasksByStatusAndFields(modelId, statusId string, dataFields []TaskDataField) (tasks []TasksResponseData, err error)
-	//GetModelTasksByFields(modelId string, dataFields []TaskDataField) (tasks []TasksResponseData, err error)
-	//UpdateTask(taskId int, fields []UpdateTaskField) (err error)
-	//UpdateTaskStatus(taskId int, statusId string) (err error)
 }
 
 func NewNeaktor(runner *HttpRunner.IHttpRunner, apiToken string, apiLimit int) INeaktor {
@@ -63,35 +56,6 @@ func NewNeaktor(runner *HttpRunner.IHttpRunner, apiToken string, apiLimit int) I
 		token:         apiToken,
 		modelCacheMap: make(map[string]ModelCache, 0),
 	}
-}
-
-func parseErrorCode(code string, message string) error {
-	if strings.EqualFold(code, ErrCode403.Error()) {
-		return fmt.Errorf("%w: %s", ErrCode403, message)
-	}
-	if strings.EqualFold(code, ErrCode404.Error()) {
-		return fmt.Errorf("%w: %s", ErrCode404, message)
-	}
-	if strings.EqualFold(code, ErrCode429.Error()) {
-		return fmt.Errorf("%w: %s", ErrCode429, message)
-	}
-	if strings.EqualFold(code, ErrCode422.Error()) {
-		return fmt.Errorf("%w: %s", ErrCode422, message)
-	}
-	if strings.EqualFold(code, ErrCode500.Error()) {
-		return fmt.Errorf("%w: %s", ErrCode500, message)
-	}
-
-	return ErrCodeUnknown
-}
-
-////////
-
-var ErrModelNotFound = errors.New("MODEL_NOT_FOUND")
-
-type ModelCache struct {
-	lastUpdatedAt time.Time
-	model         IModel
 }
 
 func (n *Neaktor) GetModelByTitle(title string) (model IModel, err error) {
@@ -147,12 +111,12 @@ func (n *Neaktor) GetModelByTitle(title string) (model IModel, err error) {
 
 	n.apiLimiter.Take()
 
-	response, err := n.runner.GetJson(HttpRunner.JsonRequestData{
-		Url: API_SERVER + "/v1/taskmodels?size=100",
-		Headers: map[string]string{
-			"Authorization": n.token,
-		},
+	jsonRequestData := HttpRunner.NewJsonRequestData(API_SERVER + "/v1/taskmodels?size=100")
+	jsonRequestData.SetHeaders(map[string]string{
+		"Authorization": n.token,
 	})
+
+	response, err := n.runner.GetJson(jsonRequestData)
 	if err != nil {
 		return model, fmt.Errorf("/v1/taskmodels?size=100 response error: %w", err)
 	}
