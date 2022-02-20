@@ -38,7 +38,7 @@ type ModelAssignee struct {
 
 type Model struct {
 	neaktor  *Neaktor
-	modelId  string
+	id       string
 	statuses map[string]ModelStatus
 	fields   map[string]ModelField
 }
@@ -47,6 +47,7 @@ var ErrModelStatusNotFound = errors.New("MODEL_STATUS_NOT_FOUND")
 var ErrModelFieldNotFound = errors.New("MODEL_FIELD_NOT_FOUND")
 
 type IModel interface {
+	GetId() string
 	GetAllStatuses() (statuses map[string]ModelStatus)
 	GetAllFields() (fields map[string]ModelField)
 	GetStatuses(titles []string) (statuses map[string]ModelStatus, err error)
@@ -57,15 +58,20 @@ type IModel interface {
 	GetTasksByStatuses(statuses []ModelStatus) (tasks []ITask, err error)
 	GetTasksByStatusAndFields(status ModelStatus, dataFields []TaskField) (tasks []ITask, err error)
 	GetTasksByFields(dataFields []TaskField) (tasks []ITask, err error)
+	GetTaskById(id int) (task ITask, err error)
 }
 
-func NewModel(neaktor *Neaktor, modelId string, statuses map[string]ModelStatus, fields map[string]ModelField) IModel {
+func NewModel(neaktor *Neaktor, id string, statuses map[string]ModelStatus, fields map[string]ModelField) IModel {
 	return &Model{
 		neaktor:  neaktor,
-		modelId:  modelId,
+		id:       id,
 		statuses: statuses,
 		fields:   fields,
 	}
+}
+
+func (m *Model) GetId() string {
+	return m.id
 }
 
 func (m *Model) GetAllStatuses() (statuses map[string]ModelStatus) {
@@ -175,14 +181,14 @@ func (m *Model) GetTasksByStatus(status ModelStatus) (tasks []ITask, err error) 
 	for page := 0; page < maxPages; page++ {
 		m.neaktor.apiLimiter.Take()
 
-		jsonRequestData := HttpRunner.NewJsonRequestData(fmt.Sprintf(API_SERVER+"/v1/tasks?model_id=%s&status_id=%s&size=%d&page=%d", m.modelId, status.Id, limit, page))
+		jsonRequestData := HttpRunner.NewJsonRequestData(fmt.Sprintf(API_SERVER+"/v1/tasks?model_id=%s&status_id=%s&size=%d&page=%d", m.id, status.Id, limit, page))
 		jsonRequestData.SetHeaders(map[string]string{
 			"Authorization": m.neaktor.token,
 		})
 
 		response, err := m.neaktor.runner.GetJson(jsonRequestData)
 		if err != nil {
-			return tasks, fmt.Errorf("/v1/tasks?model_id=%s&status_id=%s&size=%d&page=%d response error: %w", m.modelId, status.Id, limit, page, err)
+			return tasks, fmt.Errorf("/v1/tasks?model_id=%s&status_id=%s&size=%d&page=%d response error: %w", m.id, status.Id, limit, page, err)
 		}
 
 		var tasksResponse TasksResponse
@@ -293,14 +299,14 @@ func (m *Model) GetTasksByStatusAndFields(status ModelStatus, dataFields []TaskF
 	for {
 		m.neaktor.apiLimiter.Take()
 
-		jsonRequestData := HttpRunner.NewJsonRequestData(fmt.Sprintf(API_SERVER+"/v1/tasks?model_id=%s&status_id=%s&%s&size=50&page=%d", m.modelId, status.Id, values.Encode(), page))
+		jsonRequestData := HttpRunner.NewJsonRequestData(fmt.Sprintf(API_SERVER+"/v1/tasks?model_id=%s&status_id=%s&%s&size=50&page=%d", m.id, status.Id, values.Encode(), page))
 		jsonRequestData.SetHeaders(map[string]string{
 			"Authorization": m.neaktor.token,
 		})
 
 		response, err := m.neaktor.runner.GetJson(jsonRequestData)
 		if err != nil {
-			return tasks, fmt.Errorf("/v1/tasks?model_id=%s&status_id=%s&%s&size=%d response error: %w", m.modelId, status.Id, values.Encode(), page, err)
+			return tasks, fmt.Errorf("/v1/tasks?model_id=%s&status_id=%s&%s&size=%d response error: %w", m.id, status.Id, values.Encode(), page, err)
 		}
 
 		var tasksResponse TasksResponse
@@ -404,14 +410,14 @@ func (m *Model) GetTasksByFields(dataFields []TaskField) (tasks []ITask, err err
 	for {
 		m.neaktor.apiLimiter.Take()
 
-		jsonRequestData := HttpRunner.NewJsonRequestData(fmt.Sprintf(API_SERVER+"/v1/tasks?model_id=%s&%s&size=50&page=%d", m.modelId, values.Encode(), page))
+		jsonRequestData := HttpRunner.NewJsonRequestData(fmt.Sprintf(API_SERVER+"/v1/tasks?model_id=%s&%s&size=50&page=%d", m.id, values.Encode(), page))
 		jsonRequestData.SetHeaders(map[string]string{
 			"Authorization": m.neaktor.token,
 		})
 
 		response, err := m.neaktor.runner.GetJson(jsonRequestData)
 		if err != nil {
-			return tasks, fmt.Errorf("/v1/tasks?model_id=%s&%s&size=50&page=%d response error: %w", m.modelId, values.Encode(), page, err)
+			return tasks, fmt.Errorf("/v1/tasks?model_id=%s&%s&size=50&page=%d response error: %w", m.id, values.Encode(), page, err)
 		}
 
 		var tasksResponse TasksResponse
@@ -449,4 +455,64 @@ func (m *Model) GetTasksByFields(dataFields []TaskField) (tasks []ITask, err err
 	}
 
 	return tasks, nil
+}
+
+func (m *Model) GetTaskById(id int) (task ITask, err error) {
+	type TaskDataField struct {
+		Id    string      `json:"id"`
+		Value interface{} `json:"value"`
+		State string      `json:"state"`
+	}
+
+	type TaskResponse struct {
+		Id         int             `json:"id"`
+		ProjectId  string          `json:"projectId"`
+		Fields     []TaskDataField `json:"fields"`
+		Status     string          `json:"status"`
+		ModelId    string          `json:"modelId"`
+		CanDelete  bool            `json:"canDelete"`
+		ModuleId   string          `json:"moduleId"`
+		Idx        string          `json:"idx"`
+		ParentId   interface{}     `json:"parentId"`
+		SubtaskIds []interface{}   `json:"subtaskIds"`
+	}
+
+	//
+
+	m.neaktor.apiLimiter.Take()
+
+	jsonRequestData := HttpRunner.NewJsonRequestData(fmt.Sprintf(API_SERVER+"/v1/tasks/%d", id))
+	jsonRequestData.SetHeaders(map[string]string{
+		"Authorization": m.neaktor.token,
+	})
+
+	response, err := m.neaktor.runner.GetJson(jsonRequestData)
+	if err != nil {
+		return task, fmt.Errorf("/v1/tasks/%d response error: %w", id, err)
+	}
+
+	var tasksResponse []TaskResponse
+	if err := json.Unmarshal(response.Body(), &tasksResponse); err != nil {
+		log.Debugf("response code: %d, response body: %v", response.StatusCode(), string(response.Body()))
+		return task, fmt.Errorf("unmarshaling error: %w", err)
+	}
+	//if len(tasksResponse.Code) > 0 {
+	//	return task, parseErrorCode(tasksResponse.Code, tasksResponse.Message)
+	//}
+
+	for _, taskData := range tasksResponse {
+		fields := make([]TaskField, 0)
+
+		for _, field := range taskData.Fields {
+			fields = append(fields, TaskField{
+				ModelField: m.fields[field.Id],
+				Value:      field.Value,
+				State:      field.State,
+			})
+		}
+
+		return NewTask(m, taskData.Id, taskData.Idx, fields), err
+	}
+
+	return task, ErrTaskNotFound
 }
