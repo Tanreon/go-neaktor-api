@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"go.uber.org/ratelimit"
@@ -42,7 +43,8 @@ type Neaktor struct {
 	refreshToken string
 	token        string
 
-	modelCacheMap map[string]ModelCache
+	modelCacheLock sync.RWMutex
+	modelCacheMap  map[string]ModelCache
 }
 
 type INeaktor interface {
@@ -51,10 +53,11 @@ type INeaktor interface {
 
 func NewNeaktor(runner *HttpRunner.IHttpRunner, apiToken string, apiLimit int) INeaktor {
 	return &Neaktor{
-		apiLimiter:    ratelimit.New(apiLimit, ratelimit.Per(time.Minute)),
-		runner:        *runner,
-		token:         apiToken,
-		modelCacheMap: make(map[string]ModelCache, 0),
+		apiLimiter:     ratelimit.New(apiLimit, ratelimit.Per(time.Minute)),
+		runner:         *runner,
+		token:          apiToken,
+		modelCacheLock: sync.RWMutex{},
+		modelCacheMap:  make(map[string]ModelCache, 0),
 	}
 }
 
@@ -96,6 +99,9 @@ func (n *Neaktor) GetModelByTitle(title string) (model IModel, err error) {
 		Total int                     `json:"total"`
 		NeaktorErrorResponse
 	}
+
+	n.modelCacheLock.RLock()
+	defer n.modelCacheLock.RUnlock()
 
 	// cache first
 
