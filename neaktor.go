@@ -43,7 +43,7 @@ type Neaktor struct {
 	refreshToken string
 	token        string
 
-	modelCacheLock sync.RWMutex
+	modelCacheLock sync.Mutex
 	modelCacheMap  map[string]ModelCache
 }
 
@@ -56,7 +56,7 @@ func NewNeaktor(runner *HttpRunner.IHttpRunner, apiToken string, apiLimit int) I
 		apiLimiter:     ratelimit.New(apiLimit, ratelimit.Per(time.Minute)),
 		runner:         *runner,
 		token:          apiToken,
-		modelCacheLock: sync.RWMutex{},
+		modelCacheLock: sync.Mutex{},
 		modelCacheMap:  make(map[string]ModelCache, 0),
 	}
 }
@@ -100,8 +100,8 @@ func (n *Neaktor) GetModelByTitle(title string) (model IModel, err error) {
 		NeaktorErrorResponse
 	}
 
-	n.modelCacheLock.RLock()
-	defer n.modelCacheLock.RUnlock()
+	n.modelCacheLock.Lock()
+	defer n.modelCacheLock.Unlock()
 
 	// cache first
 
