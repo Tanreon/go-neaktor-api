@@ -28,8 +28,8 @@ var ErrTaskFieldNotFound = errors.New("TASK_FIELD_NOT_FOUND")
 type ITask interface {
 	GetId() int
 	GetIdx() string
-	GetField(modelField ModelField) (taskField TaskField, err error)
-	UpdateFields([]TaskField) error
+	GetField(modelField ModelField) (field TaskField, err error)
+	UpdateFields(fields []TaskField) error
 	UpdateStatus(status ModelStatus) error
 	AddComment(message string) error
 }

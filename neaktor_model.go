@@ -56,9 +56,13 @@ type IModel interface {
 	GetField(title string) (field ModelField, err error)
 	GetTasksByStatus(status ModelStatus) (tasks []ITask, err error)
 	GetTasksByStatuses(statuses []ModelStatus) (tasks []ITask, err error)
-	GetTasksByStatusAndFields(status ModelStatus, dataFields []TaskField) (tasks []ITask, err error)
-	GetTasksByFields(dataFields []TaskField) (tasks []ITask, err error)
+	GetTasksByStatusAndFields(status ModelStatus, fields []TaskField) (tasks []ITask, err error)
+	GetTasksByFields(fields []TaskField) (tasks []ITask, err error)
 	GetTaskById(id int) (task ITask, err error)
+	IsTasksByStatusExists(status ModelStatus) (isExists bool, err error)
+	IsTasksByStatusesExists(statuses []ModelStatus) (isExists bool, err error)
+	IsTasksByStatusAndFieldsExists(status ModelStatus, fields []TaskField) (isExists bool, err error)
+	IsTasksByFieldsExists(fields []TaskField) (isExists bool, err error)
 }
 
 func NewModel(neaktor *Neaktor, id string, statuses map[string]ModelStatus, fields map[string]ModelField) IModel {
@@ -139,6 +143,42 @@ func (m *Model) GetField(title string) (field ModelField, err error) {
 }
 
 //
+
+func (m *Model) IsTasksByStatusExists(status ModelStatus) (isExists bool, err error) {
+	tasks, err := m.GetTasksByStatus(status)
+	if err != nil {
+		return isExists, err
+	}
+
+	return len(tasks) > 0, err
+}
+
+func (m *Model) IsTasksByStatusesExists(statuses []ModelStatus) (isExists bool, err error) {
+	tasks, err := m.GetTasksByStatuses(statuses)
+	if err != nil {
+		return isExists, err
+	}
+
+	return len(tasks) > 0, err
+}
+
+func (m *Model) IsTasksByStatusAndFieldsExists(status ModelStatus, fields []TaskField) (isExists bool, err error) {
+	tasks, err := m.GetTasksByStatusAndFields(status, fields)
+	if err != nil {
+		return isExists, err
+	}
+
+	return len(tasks) > 0, err
+}
+
+func (m *Model) IsTasksByFieldsExists(fields []TaskField) (isExists bool, err error) {
+	tasks, err := m.GetTasksByFields(fields)
+	if err != nil {
+		return isExists, err
+	}
+
+	return len(tasks) > 0, err
+}
 
 func (m *Model) GetTasksByStatus(status ModelStatus) (tasks []ITask, err error) {
 	type TaskDataField struct {
@@ -235,7 +275,7 @@ func (m *Model) GetTasksByStatuses(statuses []ModelStatus) (tasks []ITask, err e
 	return tasks, err
 }
 
-func (m *Model) GetTasksByStatusAndFields(status ModelStatus, dataFields []TaskField) (tasks []ITask, err error) {
+func (m *Model) GetTasksByStatusAndFields(status ModelStatus, fields []TaskField) (tasks []ITask, err error) {
 	type TaskDataField struct {
 		Id    string      `json:"id"`
 		Value interface{} `json:"value"`
@@ -271,7 +311,7 @@ func (m *Model) GetTasksByStatusAndFields(status ModelStatus, dataFields []TaskF
 	//
 
 	values := url.Values{}
-	for _, field := range dataFields {
+	for _, field := range fields {
 		var value string
 		switch field.Value.(type) {
 		case string:
@@ -346,7 +386,7 @@ func (m *Model) GetTasksByStatusAndFields(status ModelStatus, dataFields []TaskF
 	return tasks, err
 }
 
-func (m *Model) GetTasksByFields(dataFields []TaskField) (tasks []ITask, err error) {
+func (m *Model) GetTasksByFields(fields []TaskField) (tasks []ITask, err error) {
 	type TaskDataField struct {
 		Id    string      `json:"id"`
 		Value interface{} `json:"value"`
@@ -382,7 +422,7 @@ func (m *Model) GetTasksByFields(dataFields []TaskField) (tasks []ITask, err err
 	//
 
 	values := url.Values{}
-	for _, field := range dataFields {
+	for _, field := range fields {
 		var value string
 		switch field.Value.(type) {
 		case string:
