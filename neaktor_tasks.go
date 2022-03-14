@@ -62,26 +62,21 @@ func (t *Task) GetField(modelField ModelField) (taskField TaskField, err error) 
 }
 
 func (t *Task) UpdateFields(fields []TaskField) error {
-	//type UpdateTaskFieldsCurrencyValue struct {
-	//	Value    float64 `json:"value,omitempty"`
-	//	Currency string  `json:"currency,omitempty"`
-	//}
-
-	type UpdateTaskAssignee struct {
+	type UpdateTaskRequestAssignee struct {
 		Id   int    `json:"id,omitempty"`
 		Type string `json:"type,omitempty"`
 	}
 
-	type UpdateTaskField struct {
+	type UpdateTaskRequestField struct {
 		Id    string      `json:"id,omitempty"`
 		Value interface{} `json:"value,omitempty"`
 	}
 
 	type UpdateTaskRequest struct {
-		StartDate string              `json:"startDate,omitempty"`
-		EndDate   string              `json:"endDate,omitempty"`
-		Assignee  *UpdateTaskAssignee `json:"assignee,omitempty"`
-		Fields    []UpdateTaskField   `json:"fields,omitempty"`
+		StartDate string                     `json:"startDate,omitempty"`
+		EndDate   string                     `json:"endDate,omitempty"`
+		Assignee  *UpdateTaskRequestAssignee `json:"assignee,omitempty"`
+		Fields    []UpdateTaskRequestField   `json:"fields,omitempty"`
 	}
 
 	type UpdateTasksResponse struct {
@@ -92,10 +87,10 @@ func (t *Task) UpdateFields(fields []TaskField) error {
 
 	t.model.neaktor.apiLimiter.Take()
 
-	updateFields := make([]UpdateTaskField, 0)
+	updateFields := make([]UpdateTaskRequestField, 0)
 
 	for _, field := range fields {
-		updateFields = append(updateFields, UpdateTaskField{
+		updateFields = append(updateFields, UpdateTaskRequestField{
 			Id:    field.ModelField.Id,
 			Value: field.Value,
 		})
@@ -133,15 +128,15 @@ func (t *Task) UpdateFields(fields []TaskField) error {
 }
 
 func (t *Task) UpdateStatus(status ModelStatus) error {
-	type UpdateTaskStatusAssignee struct {
+	type UpdateTaskStatusRequestAssignee struct {
 		Id   int    `json:"id,omitempty"`
 		Type string `json:"type,omitempty"`
 	}
 
 	type UpdateTaskStatusRequest struct {
-		Status      string                    `json:"status,omitempty"`
-		ConditionId string                    `json:"conditionId,omitempty"`
-		Assignee    *UpdateTaskStatusAssignee `json:"assignee,omitempty"`
+		Status      string                           `json:"status,omitempty"`
+		ConditionId string                           `json:"conditionId,omitempty"`
+		Assignee    *UpdateTaskStatusRequestAssignee `json:"assignee,omitempty"`
 	}
 
 	type UpdateTaskStatusResponse struct {

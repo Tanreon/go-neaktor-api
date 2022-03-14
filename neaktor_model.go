@@ -181,23 +181,23 @@ func (m *Model) IsTasksByFieldsExists(fields []TaskField) (isExists bool, err er
 }
 
 func (m *Model) GetTasksByStatus(status ModelStatus) (tasks []ITask, err error) {
-	type TaskDataField struct {
+	type DataField struct {
 		Id    string      `json:"id"`
 		Value interface{} `json:"value"`
 		State string      `json:"state"`
 	}
 
 	type TasksResponseData struct {
-		Id         int             `json:"id"`
-		ProjectId  string          `json:"projectId"`
-		Fields     []TaskDataField `json:"fields"`
-		Status     string          `json:"status"`
-		ModelId    string          `json:"modelId"`
-		CanDelete  bool            `json:"canDelete"`
-		ModuleId   string          `json:"moduleId"`
-		Idx        string          `json:"idx"`
-		ParentId   interface{}     `json:"parentId"`
-		SubtaskIds []interface{}   `json:"subtaskIds"`
+		Id         int           `json:"id"`
+		ProjectId  string        `json:"projectId"`
+		Fields     []DataField   `json:"fields"`
+		Status     string        `json:"status"`
+		ModelId    string        `json:"modelId"`
+		CanDelete  bool          `json:"canDelete"`
+		ModuleId   string        `json:"moduleId"`
+		Idx        string        `json:"idx"`
+		ParentId   interface{}   `json:"parentId"`
+		SubtaskIds []interface{} `json:"subtaskIds"`
 	}
 
 	type TasksResponseLinks struct {
@@ -276,23 +276,23 @@ func (m *Model) GetTasksByStatuses(statuses []ModelStatus) (tasks []ITask, err e
 }
 
 func (m *Model) GetTasksByStatusAndFields(status ModelStatus, fields []TaskField) (tasks []ITask, err error) {
-	type TaskDataField struct {
+	type DataField struct {
 		Id    string      `json:"id"`
 		Value interface{} `json:"value"`
 		State string      `json:"state"`
 	}
 
 	type TasksResponseData struct {
-		Id         int             `json:"id"`
-		ProjectId  string          `json:"projectId"`
-		Fields     []TaskDataField `json:"fields"`
-		Status     string          `json:"status"`
-		ModelId    string          `json:"modelId"`
-		CanDelete  bool            `json:"canDelete"`
-		ModuleId   string          `json:"moduleId"`
-		Idx        string          `json:"idx"`
-		ParentId   interface{}     `json:"parentId"`
-		SubtaskIds []interface{}   `json:"subtaskIds"`
+		Id         int           `json:"id"`
+		ProjectId  string        `json:"projectId"`
+		Fields     []DataField   `json:"fields"`
+		Status     string        `json:"status"`
+		ModelId    string        `json:"modelId"`
+		CanDelete  bool          `json:"canDelete"`
+		ModuleId   string        `json:"moduleId"`
+		Idx        string        `json:"idx"`
+		ParentId   interface{}   `json:"parentId"`
+		SubtaskIds []interface{} `json:"subtaskIds"`
 	}
 
 	type TasksResponseLinks struct {
@@ -387,23 +387,23 @@ func (m *Model) GetTasksByStatusAndFields(status ModelStatus, fields []TaskField
 }
 
 func (m *Model) GetTasksByFields(fields []TaskField) (tasks []ITask, err error) {
-	type TaskDataField struct {
+	type DataField struct {
 		Id    string      `json:"id"`
 		Value interface{} `json:"value"`
 		State string      `json:"state"`
 	}
 
 	type TasksResponseData struct {
-		Id         int             `json:"id"`
-		ProjectId  string          `json:"projectId"`
-		Fields     []TaskDataField `json:"fields"`
-		Status     string          `json:"status"`
-		ModelId    string          `json:"modelId"`
-		CanDelete  bool            `json:"canDelete"`
-		ModuleId   string          `json:"moduleId"`
-		Idx        string          `json:"idx"`
-		ParentId   interface{}     `json:"parentId"`
-		SubtaskIds []interface{}   `json:"subtaskIds"`
+		Id         int           `json:"id"`
+		ProjectId  string        `json:"projectId"`
+		Fields     []DataField   `json:"fields"`
+		Status     string        `json:"status"`
+		ModelId    string        `json:"modelId"`
+		CanDelete  bool          `json:"canDelete"`
+		ModuleId   string        `json:"moduleId"`
+		Idx        string        `json:"idx"`
+		ParentId   interface{}   `json:"parentId"`
+		SubtaskIds []interface{} `json:"subtaskIds"`
 	}
 
 	type TasksResponseLinks struct {
@@ -498,23 +498,23 @@ func (m *Model) GetTasksByFields(fields []TaskField) (tasks []ITask, err error) 
 }
 
 func (m *Model) GetTaskById(id int) (task ITask, err error) {
-	type TaskDataField struct {
+	type TaskResponseField struct {
 		Id    string      `json:"id"`
 		Value interface{} `json:"value"`
 		State string      `json:"state"`
 	}
 
 	type TaskResponse struct {
-		Id         int             `json:"id"`
-		ProjectId  string          `json:"projectId"`
-		Fields     []TaskDataField `json:"fields"`
-		Status     string          `json:"status"`
-		ModelId    string          `json:"modelId"`
-		CanDelete  bool            `json:"canDelete"`
-		ModuleId   string          `json:"moduleId"`
-		Idx        string          `json:"idx"`
-		ParentId   interface{}     `json:"parentId"`
-		SubtaskIds []interface{}   `json:"subtaskIds"`
+		Id         int                 `json:"id"`
+		ProjectId  string              `json:"projectId"`
+		Fields     []TaskResponseField `json:"fields"`
+		Status     string              `json:"status"`
+		ModelId    string              `json:"modelId"`
+		CanDelete  bool                `json:"canDelete"`
+		ModuleId   string              `json:"moduleId"`
+		Idx        string              `json:"idx"`
+		ParentId   interface{}         `json:"parentId"`
+		SubtaskIds []interface{}       `json:"subtaskIds"`
 	}
 
 	//

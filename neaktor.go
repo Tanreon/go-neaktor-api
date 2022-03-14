@@ -137,34 +137,36 @@ func (n *Neaktor) GetModelByTitle(title string) (model IModel, err error) {
 	}
 
 	for _, item := range taskModelResponse.Data {
-		if item.Name == title {
-			modelStatuses := make(map[string]ModelStatus, 0)
-			for _, status := range item.Statuses {
-				modelStatuses[status.Id] = ModelStatus{
-					Id:     status.Id,
-					Name:   status.Name,
-					Closed: status.Closed,
-					Type:   status.Type,
-				}
+		modelStatuses := make(map[string]ModelStatus, 0)
+		for _, status := range item.Statuses {
+			modelStatuses[status.Id] = ModelStatus{
+				Id:     status.Id,
+				Name:   status.Name,
+				Closed: status.Closed,
+				Type:   status.Type,
 			}
-			modelFields := make(map[string]ModelField, 0)
-			for _, field := range item.Fields {
-				modelFields[field.Id] = ModelField{
-					Id:    field.Id,
-					Name:  field.Name,
-					State: field.State,
-				}
-			}
-
-			model = NewModel(n, item.Id, modelStatuses, modelFields)
-
-			n.modelCacheMap[item.Name] = ModelCache{
-				lastUpdatedAt: time.Now(),
-				model:         model,
-			}
-
-			return model, err
 		}
+		modelFields := make(map[string]ModelField, 0)
+		for _, field := range item.Fields {
+			modelFields[field.Id] = ModelField{
+				Id:    field.Id,
+				Name:  field.Name,
+				State: field.State,
+			}
+		}
+
+		model = NewModel(n, item.Id, modelStatuses, modelFields)
+
+		n.modelCacheMap[item.Name] = ModelCache{
+			lastUpdatedAt: time.Now(),
+			model:         model,
+		}
+	}
+
+	//
+
+	if cachedModel, present := n.modelCacheMap[title]; present {
+		return cachedModel.model, err
 	}
 
 	return model, ErrModelNotFound
