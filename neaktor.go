@@ -22,6 +22,7 @@ var ErrCode404 = errors.New("404")
 var ErrCode422 = errors.New("422")
 var ErrCode429 = errors.New("429 TOO_MANY_REQUESTS") // This and below not typo error
 var ErrCode500 = errors.New("500 INTERNAL_SERVER_ERROR")
+var ErrApiTokenIncorrect = errors.New("API_TOKEN_INCORRECT")
 var ErrModelNotFound = errors.New("MODEL_NOT_FOUND")
 
 type ModelCache struct {
@@ -48,6 +49,7 @@ type Neaktor struct {
 }
 
 type INeaktor interface {
+	RefreshToken(clientId, clientSecret, refreshToken string) (err error)
 	GetModelByTitle(title string) (model IModel, err error)
 }
 
@@ -59,6 +61,58 @@ func NewNeaktor(runner *HttpRunner.IHttpRunner, apiToken string, apiLimit int) I
 		modelCacheLock: sync.Mutex{},
 		modelCacheMap:  make(map[string]ModelCache, 0),
 	}
+}
+
+func NewNeaktorByRefreshToken(runner *HttpRunner.IHttpRunner, refreshToken string, apiLimit int) INeaktor {
+	return &Neaktor{
+		apiLimiter:     ratelimit.New(apiLimit, ratelimit.Per(time.Minute)),
+		runner:         *runner,
+		refreshToken:   refreshToken,
+		modelCacheLock: sync.Mutex{},
+		modelCacheMap:  make(map[string]ModelCache, 0),
+	}
+}
+
+func (n *Neaktor) RefreshToken(clientId, clientSecret, refreshToken string) (err error) { // FIXME временная мера из-за бага в самом неакторе, приходится таким образом доставать ключ
+	type OauthTokenResponse struct {
+		NeaktorErrorResponse
+		AccessToken  string `json:"access_token"`
+		TokenType    string `json:"token_type"`
+		RefreshToken string `json:"refresh_token"`
+		ExpiresIn    int    `json:"expires_in"`
+		Scope        string `json:"scope"`
+	}
+
+	formRequestData := HttpRunner.NewFormRequestData("https://api.neaktor.com/oauth/token")
+	formRequestData.SetValues(map[string]string{
+		"grant_type":    "refresh_token",
+		"redirect_uri":  "https://redirectUri.com",
+		"client_id":     clientId,
+		"client_secret": clientSecret,
+		"refresh_token": refreshToken,
+	})
+
+	response, err := n.runner.PostForm(formRequestData)
+	if err != nil {
+		return fmt.Errorf("/oauth/token response error: %w", err)
+	}
+
+	var oauthTokenResponse OauthTokenResponse
+	if err := json.Unmarshal(response.Body(), &oauthTokenResponse); err != nil {
+		log.Debugf("response code: %d, response body: %v", response.StatusCode(), string(response.Body()))
+		return fmt.Errorf("unmarshaling error: %w", err)
+	}
+	if len(oauthTokenResponse.Code) > 0 {
+		parseErrorCode(oauthTokenResponse.Code, oauthTokenResponse.Message)
+	}
+
+	if len(oauthTokenResponse.AccessToken) <= 0 {
+		return ErrApiTokenIncorrect
+	}
+
+	n.token = "Bearer " + oauthTokenResponse.AccessToken
+
+	return err
 }
 
 func (n *Neaktor) GetModelByTitle(title string) (model IModel, err error) {

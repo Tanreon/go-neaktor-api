@@ -9,6 +9,11 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+type CurrencyFieldValue struct {
+	Value    float64 `json:"value"`
+	Currency string  `json:"currency"`
+}
+
 type TaskField struct {
 	ModelField ModelField
 	Value      interface{}

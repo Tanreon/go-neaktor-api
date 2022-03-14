@@ -2,8 +2,9 @@ cloud.google.com/go v0.26.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMT
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/Tanreon/go-http-runner v0.0.0-20220220161859-7b7ad74f6f11 h1:6wAkfz8heICVaKBMwyuJlS2qSqPY/FhIs+tVXTwQkq0=
 github.com/Tanreon/go-http-runner v0.0.0-20220220161859-7b7ad74f6f11/go.mod h1:PQY9qFz4PsFWpHdFP8eTc/622OOvj8jNr9gn6rLiPTg=
-github.com/Tanreon/go-network-runner v0.0.0-20220220141414-864c18a8b195 h1:XyFUZw1JHJ8unxfKcL2vecW0nnoop32tN50Q+BFZHpQ=
 github.com/Tanreon/go-network-runner v0.0.0-20220220141414-864c18a8b195/go.mod h1:QfL/AfV+vvAqPkRDv3F2Zoq+ShN5AdxE5tovFGWupsI=
+github.com/Tanreon/go-network-runner v0.0.0-20220307131321-0e7822e5a015 h1:TjPrTP/oxDg5Qpz3KL1xqItkp34o5zS+a495GJhjxPY=
+github.com/Tanreon/go-network-runner v0.0.0-20220307131321-0e7822e5a015/go.mod h1:QfL/AfV+vvAqPkRDv3F2Zoq+ShN5AdxE5tovFGWupsI=
 github.com/aead/chacha20 v0.0.0-20180709150244-8b13a72661da h1:KjTM2ks9d14ZYCvmHS9iAKVt9AyzRSqNU1qabPih5BY=
 github.com/aead/chacha20 v0.0.0-20180709150244-8b13a72661da/go.mod h1:eHEWzANqSiWQsof+nXEI9bUVUyV6F53Fp89EuCh2EAA=
 github.com/andres-erbsen/clock v0.0.0-20160526145045-9e14626cd129 h1:MzBOUgng9orim59UnfUTLRjMpd09C5uEVQ6RPGeCaVI=

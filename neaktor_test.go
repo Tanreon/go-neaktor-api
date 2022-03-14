@@ -11,11 +11,10 @@ import (
 
 func TestNeaktorApi(t *testing.T) {
 	t.Run("NeaktorApi", func(t *testing.T) {
-		dialOptions := NetworkRunner.DialOptions{
-			DialTimeout:  120,
-			RelayTimeout: 60,
-		}
-		directDialer, err := NetworkRunner.NewDirectDialer(dialOptions)
+		directDialOptions := NetworkRunner.NewDirectDialOptions()
+		directDialOptions.SetDialTimeout(120)
+		directDialOptions.SetRelayTimeout(60)
+		directDialer, err := NetworkRunner.NewDirectDialer(directDialOptions)
 		if err != nil {
 			t.Fatal(err)
 		}

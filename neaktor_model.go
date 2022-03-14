@@ -7,6 +7,8 @@ import (
 	"math"
 	"net/url"
 	"strings"
+	"sync"
+	"time"
 
 	HttpRunner "github.com/Tanreon/go-http-runner"
 	log "github.com/sirupsen/logrus"
@@ -30,10 +32,23 @@ type ModelRoles struct {
 	Name string
 }
 
+type CustomFieldOption struct {
+	id    string
+	value string
+}
+type ModelCustomFieldCache struct {
+	lastUpdatedAt      time.Time
+	customFieldOptions []CustomFieldOption
+}
+
 type ModelAssignee struct {
-	Id   string
-	Name string
-	Type string
+	id     int
+	name   string
+	typeOf string
+}
+type ModelAssigneeCache struct {
+	lastUpdatedAt  time.Time
+	modelAssignees []ModelAssignee
 }
 
 type Model struct {
@@ -41,10 +56,18 @@ type Model struct {
 	id       string
 	statuses map[string]ModelStatus
 	fields   map[string]ModelField
+
+	modelCustomFieldCacheLock sync.Mutex
+	modelCustomFieldCacheMap  map[string]ModelCustomFieldCache
+
+	modelAssigneeCacheLock sync.Mutex
+	modelAssigneeCacheMap  map[string]ModelAssigneeCache
 }
 
 var ErrModelStatusNotFound = errors.New("MODEL_STATUS_NOT_FOUND")
 var ErrModelFieldNotFound = errors.New("MODEL_FIELD_NOT_FOUND")
+var ErrModelCustomFieldOptionNotFound = errors.New("MODEL_CUSTOM_FIELD_OPTION_NOT_FOUND")
+var ErrModelAssigneeNotFound = errors.New("MODEL_ASSIGNEE_NOT_FOUND")
 
 type IModel interface {
 	GetId() string
@@ -54,6 +77,8 @@ type IModel interface {
 	GetFields(titles []string) (fields map[string]ModelField, err error)
 	GetStatus(title string) (status ModelStatus, err error)
 	GetField(title string) (field ModelField, err error)
+	GetCustomFieldOptionId(field ModelField, value string) (optionId string, err error)
+	GetAssignee(status ModelStatus, name string) (assignee ModelAssignee, err error)
 	GetTasksByStatus(status ModelStatus) (tasks []ITask, err error)
 	GetTasksByStatuses(statuses []ModelStatus) (tasks []ITask, err error)
 	GetTasksByStatusAndFields(status ModelStatus, fields []TaskField) (tasks []ITask, err error)
@@ -63,14 +88,19 @@ type IModel interface {
 	IsTasksByStatusesExists(statuses []ModelStatus) (isExists bool, err error)
 	IsTasksByStatusAndFieldsExists(status ModelStatus, fields []TaskField) (isExists bool, err error)
 	IsTasksByFieldsExists(fields []TaskField) (isExists bool, err error)
+	CreateTask(assignee ModelAssignee, fields []TaskField) (task ITask, err error)
 }
 
 func NewModel(neaktor *Neaktor, id string, statuses map[string]ModelStatus, fields map[string]ModelField) IModel {
 	return &Model{
-		neaktor:  neaktor,
-		id:       id,
-		statuses: statuses,
-		fields:   fields,
+		neaktor:                   neaktor,
+		id:                        id,
+		statuses:                  statuses,
+		fields:                    fields,
+		modelCustomFieldCacheLock: sync.Mutex{},
+		modelCustomFieldCacheMap:  make(map[string]ModelCustomFieldCache, 0),
+		modelAssigneeCacheLock:    sync.Mutex{},
+		modelAssigneeCacheMap:     make(map[string]ModelAssigneeCache, 0),
 	}
 }
 
@@ -140,6 +170,173 @@ func (m *Model) GetField(title string) (field ModelField, err error) {
 	}
 
 	return field, ErrModelFieldNotFound
+}
+
+func (m *Model) GetCustomFieldOptionId(field ModelField, value string) (optionId string, err error) {
+	type OptionsAvailableValues struct {
+		Id    string `json:"id"`
+		Value string `json:"value"`
+	}
+
+	type CustomFieldsResponseOptions struct {
+		AvailableValues []OptionsAvailableValues `json:"availableValues"`
+	}
+
+	type CustomFieldsResponse struct {
+		NeaktorErrorResponse
+		Id      string                      `json:"id"`
+		Type    string                      `json:"type"`
+		Name    string                      `json:"name"`
+		Options CustomFieldsResponseOptions `json:"options"`
+	}
+
+	m.modelCustomFieldCacheLock.Lock()
+	defer m.modelCustomFieldCacheLock.Unlock()
+
+	// cache first
+
+	if cachedModelCustomField, present := m.modelCustomFieldCacheMap[field.Id]; present {
+		if time.Now().Before(cachedModelCustomField.lastUpdatedAt.Add(MODEL_CACHE_TIME)) {
+			for _, customFieldOption := range cachedModelCustomField.customFieldOptions {
+				if customFieldOption.value == value {
+					return customFieldOption.id, err
+				}
+			}
+		}
+
+		delete(m.modelCustomFieldCacheMap, field.Id)
+	}
+
+	// request second
+
+	jsonRequestData := HttpRunner.NewJsonRequestData(fmt.Sprintf(API_SERVER+"/v1/customfields/%s", field.Id))
+	jsonRequestData.SetHeaders(map[string]string{
+		"Authorization": m.neaktor.token,
+	})
+
+	response, err := m.neaktor.runner.GetJson(jsonRequestData)
+	if err != nil {
+		return optionId, fmt.Errorf("/v1/customfields/%s response error: %w", field.Id, err)
+	}
+
+	var customFieldsResponses []CustomFieldsResponse
+	if err := json.Unmarshal(response.Body(), &customFieldsResponses); err != nil {
+		log.Debugf("response code: %d, response body: %v", response.StatusCode(), string(response.Body()))
+		return optionId, fmt.Errorf("unmarshaling error: %w", err)
+	}
+	//if len(createTaskResponse.Code) > 0 {
+	//	return task, parseErrorCode(createTaskResponse.Code, createTaskResponse.Message)
+	//}
+
+	for _, cutomField := range customFieldsResponses {
+		customFieldOptions := make([]CustomFieldOption, 0)
+
+		for _, item := range cutomField.Options.AvailableValues {
+			customFieldOptions = append(customFieldOptions, CustomFieldOption{
+				id:    item.Id,
+				value: item.Value,
+			})
+		}
+
+		m.modelCustomFieldCacheMap[field.Id] = ModelCustomFieldCache{
+			lastUpdatedAt:      time.Now(),
+			customFieldOptions: customFieldOptions,
+		}
+	}
+
+	//
+
+	if cachedModelCustomField, present := m.modelCustomFieldCacheMap[field.Id]; present {
+		for _, customFieldOption := range cachedModelCustomField.customFieldOptions {
+			if customFieldOption.value == value {
+				return customFieldOption.id, err
+			}
+		}
+	}
+
+	return optionId, ErrModelCustomFieldOptionNotFound
+}
+
+func (m *Model) GetAssignee(status ModelStatus, name string) (assignee ModelAssignee, err error) {
+	type RoutingResponseAssignee struct {
+		Id   int    `json:"id"`
+		Name string `json:"name"`
+		Type string `json:"type"`
+	}
+
+	type RoutingResponse struct {
+		NeaktorErrorResponse
+		To         string                    `json:"to"`
+		Conditions []interface{}             `json:"conditions"`
+		Assignees  []RoutingResponseAssignee `json:"assignees"`
+	}
+
+	m.modelAssigneeCacheLock.Lock()
+	defer m.modelAssigneeCacheLock.Unlock()
+
+	// cache first
+
+	if cachedModelAssignee, present := m.modelAssigneeCacheMap[status.Id]; present {
+		if time.Now().Before(cachedModelAssignee.lastUpdatedAt.Add(MODEL_CACHE_TIME)) {
+			for _, modelAssignee := range cachedModelAssignee.modelAssignees {
+				if modelAssignee.name == name {
+					return modelAssignee, err
+				}
+			}
+		}
+
+		delete(m.modelAssigneeCacheMap, status.Id)
+	}
+
+	// request second
+
+	jsonRequestData := HttpRunner.NewJsonRequestData(fmt.Sprintf(API_SERVER+"/v1/taskmodels/%s/%s/routings", m.id, status.Id))
+	jsonRequestData.SetHeaders(map[string]string{
+		"Authorization": m.neaktor.token,
+	})
+
+	response, err := m.neaktor.runner.GetJson(jsonRequestData)
+	if err != nil {
+		return assignee, fmt.Errorf("/v1/taskmodels/%s/%s/routings response error: %w", m.id, status.Id, err)
+	}
+
+	var routingResponses []RoutingResponse
+	if err := json.Unmarshal(response.Body(), &routingResponses); err != nil {
+		log.Debugf("response code: %d, response body: %v", response.StatusCode(), string(response.Body()))
+		return assignee, fmt.Errorf("unmarshaling error: %w", err)
+	}
+	//if len(createTaskResponse.Code) > 0 {
+	//	return task, parseErrorCode(createTaskResponse.Code, createTaskResponse.Message)
+	//}
+
+	for _, routing := range routingResponses {
+		modelAssignees := make([]ModelAssignee, 0)
+
+		for _, item := range routing.Assignees {
+			modelAssignees = append(modelAssignees, ModelAssignee{
+				id:     item.Id,
+				name:   item.Name,
+				typeOf: item.Type,
+			})
+		}
+
+		m.modelAssigneeCacheMap[routing.To] = ModelAssigneeCache{
+			lastUpdatedAt:  time.Now(),
+			modelAssignees: modelAssignees,
+		}
+	}
+
+	//
+
+	if cachedModel, present := m.modelAssigneeCacheMap[status.Id]; present {
+		for _, modelAssignee := range cachedModel.modelAssignees {
+			if modelAssignee.name == name {
+				return modelAssignee, err
+			}
+		}
+	}
+
+	return assignee, ErrModelAssigneeNotFound
 }
 
 //
@@ -555,4 +752,76 @@ func (m *Model) GetTaskById(id int) (task ITask, err error) {
 	}
 
 	return task, ErrTaskNotFound
+}
+
+func (m *Model) CreateTask(assignee ModelAssignee, fields []TaskField) (task ITask, err error) {
+	type CreateTaskRequestAssignee struct {
+		Id   int    `json:"id,omitempty"`
+		Type string `json:"type,omitempty"`
+	}
+
+	type CreateTaskRequestField struct {
+		Id    string      `json:"id,omitempty"`
+		Value interface{} `json:"value,omitempty"`
+	}
+
+	type CreateTaskRequest struct {
+		Assignee CreateTaskRequestAssignee `json:"assignee"`
+		Fields   []CreateTaskRequestField  `json:"fields"`
+	}
+
+	type CreateTaskResponse struct {
+		NeaktorErrorResponse
+		Id        int    `json:"id"`
+		ProjectId string `json:"projectId"`
+	}
+
+	//
+
+	m.neaktor.apiLimiter.Take()
+
+	createFields := make([]CreateTaskRequestField, 0)
+
+	for _, field := range fields {
+		createFields = append(createFields, CreateTaskRequestField{
+			Id:    field.ModelField.Id,
+			Value: field.Value,
+		})
+	}
+
+	createTaskReques := CreateTaskRequest{
+		Fields: createFields,
+		Assignee: CreateTaskRequestAssignee{
+			Id:   assignee.id,
+			Type: assignee.typeOf,
+		},
+	}
+	createTaskRequestBytes, err := json.Marshal(createTaskReques)
+	if err != nil {
+		return task, fmt.Errorf("marshaling error: %w", err)
+	}
+
+	jsonRequestData := HttpRunner.NewJsonRequestData(fmt.Sprintf(API_SERVER+"/v1/tasks/%s", m.id))
+	jsonRequestData.SetHeaders(map[string]string{
+		"Authorization": m.neaktor.token,
+	})
+	jsonRequestData.SetValue(createTaskRequestBytes)
+
+	response, err := m.neaktor.runner.PostJson(jsonRequestData)
+	if err != nil {
+		return task, fmt.Errorf("/v1/tasks/%s response error: %w", m.id, err)
+	}
+
+	var createTaskResponse CreateTaskResponse
+	if err := json.Unmarshal(response.Body(), &createTaskResponse); err != nil {
+		log.Debugf("response code: %d, response body: %v", response.StatusCode(), string(response.Body()))
+		return task, fmt.Errorf("unmarshaling error: %w", err)
+	}
+	if len(createTaskResponse.Code) > 0 {
+		return task, parseErrorCode(createTaskResponse.Code, createTaskResponse.Message)
+	}
+
+	//
+
+	return m.GetTaskById(createTaskResponse.Id)
 }
