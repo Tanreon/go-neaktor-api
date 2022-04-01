@@ -33,7 +33,8 @@ var ErrTaskFieldNotFound = errors.New("TASK_FIELD_NOT_FOUND")
 type ITask interface {
 	GetId() int
 	GetIdx() string
-	GetField(modelField ModelField) (field TaskField, err error)
+	GetField(modelField ModelField) (taskField TaskField, err error)
+	GetCustomField(modelField ModelField) (taskField TaskField, err error)
 	UpdateFields(fields []TaskField) error
 	UpdateStatus(status ModelStatus) error
 	AddComment(message string) error
@@ -59,6 +60,22 @@ func (t *Task) GetIdx() string {
 func (t *Task) GetField(modelField ModelField) (taskField TaskField, err error) {
 	for _, field := range t.fields {
 		if field.ModelField.Id == modelField.Id {
+			return field, err
+		}
+	}
+
+	return taskField, ErrTaskFieldNotFound
+}
+
+func (t *Task) GetCustomField(modelField ModelField) (taskField TaskField, err error) {
+	for _, field := range t.fields {
+		if field.ModelField.Id == modelField.Id {
+			value, err := t.model.GetCustomFieldValue(modelField, field.Value.(string))
+			if err != nil {
+				return field, err
+			}
+
+			field.Value = value
 			return field, err
 		}
 	}

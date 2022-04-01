@@ -67,6 +67,7 @@ type Model struct {
 var ErrModelStatusNotFound = errors.New("MODEL_STATUS_NOT_FOUND")
 var ErrModelFieldNotFound = errors.New("MODEL_FIELD_NOT_FOUND")
 var ErrModelCustomFieldOptionNotFound = errors.New("MODEL_CUSTOM_FIELD_OPTION_NOT_FOUND")
+var ErrModelCustomFieldValueNotFound = errors.New("MODEL_CUSTOM_FIELD_VALUE_NOT_FOUND")
 var ErrModelAssigneeNotFound = errors.New("MODEL_ASSIGNEE_NOT_FOUND")
 
 type IModel interface {
@@ -78,6 +79,7 @@ type IModel interface {
 	GetStatus(title string) (status ModelStatus, err error)
 	GetField(title string) (field ModelField, err error)
 	GetCustomFieldOptionId(field ModelField, value string) (optionId string, err error)
+	GetCustomFieldValue(field ModelField, optionId string) (value string, err error)
 	GetAssignee(status ModelStatus, name string) (assignee ModelAssignee, err error)
 	GetTasksByStatus(status ModelStatus) (tasks []ITask, err error)
 	GetTasksByStatuses(statuses []ModelStatus) (tasks []ITask, err error)
@@ -255,6 +257,91 @@ func (m *Model) GetCustomFieldOptionId(field ModelField, value string) (optionId
 	}
 
 	return optionId, ErrModelCustomFieldOptionNotFound
+}
+
+func (m *Model) GetCustomFieldValue(field ModelField, optionId string) (value string, err error) {
+	type OptionsAvailableValues struct {
+		Id    string `json:"id"`
+		Value string `json:"value"`
+	}
+
+	type CustomFieldsResponseOptions struct {
+		AvailableValues []OptionsAvailableValues `json:"availableValues"`
+	}
+
+	type CustomFieldsResponse struct {
+		NeaktorErrorResponse
+		Id      string                      `json:"id"`
+		Type    string                      `json:"type"`
+		Name    string                      `json:"name"`
+		Options CustomFieldsResponseOptions `json:"options"`
+	}
+
+	m.modelCustomFieldCacheLock.Lock()
+	defer m.modelCustomFieldCacheLock.Unlock()
+
+	// cache first
+
+	if cachedModelCustomField, present := m.modelCustomFieldCacheMap[field.Id]; present {
+		if time.Now().Before(cachedModelCustomField.lastUpdatedAt.Add(MODEL_CACHE_TIME)) {
+			for _, customFieldOption := range cachedModelCustomField.customFieldOptions {
+				if customFieldOption.id == optionId {
+					return customFieldOption.value, err
+				}
+			}
+		}
+
+		delete(m.modelCustomFieldCacheMap, field.Id)
+	}
+
+	// request second
+
+	jsonRequestData := HttpRunner.NewJsonRequestData(fmt.Sprintf(API_SERVER+"/v1/customfields/%s", field.Id))
+	jsonRequestData.SetHeaders(map[string]string{
+		"Authorization": m.neaktor.token,
+	})
+
+	response, err := m.neaktor.runner.GetJson(jsonRequestData)
+	if err != nil {
+		return value, fmt.Errorf("/v1/customfields/%s response error: %w", field.Id, err)
+	}
+
+	var customFieldsResponses []CustomFieldsResponse
+	if err := json.Unmarshal(response.Body(), &customFieldsResponses); err != nil {
+		log.Debugf("response code: %d, response body: %v", response.StatusCode(), string(response.Body()))
+		return value, fmt.Errorf("unmarshaling error: %w", err)
+	}
+	//if len(createTaskResponse.Code) > 0 {
+	//	return task, parseErrorCode(createTaskResponse.Code, createTaskResponse.Message)
+	//}
+
+	for _, cutomField := range customFieldsResponses {
+		customFieldOptions := make([]CustomFieldOption, 0)
+
+		for _, item := range cutomField.Options.AvailableValues {
+			customFieldOptions = append(customFieldOptions, CustomFieldOption{
+				id:    item.Id,
+				value: item.Value,
+			})
+		}
+
+		m.modelCustomFieldCacheMap[field.Id] = ModelCustomFieldCache{
+			lastUpdatedAt:      time.Now(),
+			customFieldOptions: customFieldOptions,
+		}
+	}
+
+	//
+
+	if cachedModelCustomField, present := m.modelCustomFieldCacheMap[field.Id]; present {
+		for _, customFieldOption := range cachedModelCustomField.customFieldOptions {
+			if customFieldOption.id == optionId {
+				return customFieldOption.value, err
+			}
+		}
+	}
+
+	return value, ErrModelCustomFieldValueNotFound
 }
 
 func (m *Model) GetAssignee(status ModelStatus, name string) (assignee ModelAssignee, err error) {
