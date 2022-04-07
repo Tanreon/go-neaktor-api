@@ -524,10 +524,10 @@ func (m *Model) GetTasksByStatus(status ModelStatus) (tasks []ITask, err error) 
 			return tasks, parseErrorCode(tasksResponse.Code, tasksResponse.Message)
 		}
 
-		for _, data := range tasksResponse.Data {
+		for _, taskData := range tasksResponse.Data {
 			fields := make([]TaskField, 0)
 
-			for _, field := range data.Fields {
+			for _, field := range taskData.Fields {
 				fields = append(fields, TaskField{
 					ModelField: m.fields[field.Id],
 					Value:      field.Value,
@@ -535,7 +535,15 @@ func (m *Model) GetTasksByStatus(status ModelStatus) (tasks []ITask, err error) 
 				})
 			}
 
-			tasks = append(tasks, NewTask(m, data.Id, data.Idx, fields))
+			var modelStatus ModelStatus
+
+			for _, status := range m.statuses {
+				if strings.EqualFold(status.Name, taskData.Status) {
+					modelStatus = status
+				}
+			}
+
+			tasks = append(tasks, NewTask(m, modelStatus, taskData.Id, taskData.Idx, fields))
 		}
 
 		//
@@ -642,10 +650,10 @@ func (m *Model) GetTasksByStatusAndFields(status ModelStatus, fields []TaskField
 			return tasks, parseErrorCode(tasksResponse.Code, tasksResponse.Message)
 		}
 
-		for _, data := range tasksResponse.Data {
+		for _, taskData := range tasksResponse.Data {
 			fields := make([]TaskField, 0)
 
-			for _, field := range data.Fields {
+			for _, field := range taskData.Fields {
 				fields = append(fields, TaskField{
 					ModelField: m.fields[field.Id],
 					Value:      field.Value,
@@ -653,7 +661,15 @@ func (m *Model) GetTasksByStatusAndFields(status ModelStatus, fields []TaskField
 				})
 			}
 
-			tasks = append(tasks, NewTask(m, data.Id, data.Idx, fields))
+			var modelStatus ModelStatus
+
+			for _, status := range m.statuses {
+				if strings.EqualFold(status.Name, taskData.Status) {
+					modelStatus = status
+				}
+			}
+
+			tasks = append(tasks, NewTask(m, modelStatus, taskData.Id, taskData.Idx, fields))
 		}
 
 		if tasksResponse.Total < 50 {
@@ -753,10 +769,10 @@ func (m *Model) GetTasksByFields(fields []TaskField) (tasks []ITask, err error) 
 			return tasks, parseErrorCode(tasksResponse.Code, tasksResponse.Message)
 		}
 
-		for _, data := range tasksResponse.Data {
+		for _, taskData := range tasksResponse.Data {
 			fields := make([]TaskField, 0)
 
-			for _, field := range data.Fields {
+			for _, field := range taskData.Fields {
 				fields = append(fields, TaskField{
 					ModelField: m.fields[field.Id],
 					Value:      field.Value,
@@ -764,7 +780,15 @@ func (m *Model) GetTasksByFields(fields []TaskField) (tasks []ITask, err error) 
 				})
 			}
 
-			tasks = append(tasks, NewTask(m, data.Id, data.Idx, fields))
+			var modelStatus ModelStatus
+
+			for _, status := range m.statuses {
+				if strings.EqualFold(status.Name, taskData.Status) {
+					modelStatus = status
+				}
+			}
+
+			tasks = append(tasks, NewTask(m, modelStatus, taskData.Id, taskData.Idx, fields))
 		}
 
 		if tasksResponse.Total < 50 {
@@ -835,7 +859,15 @@ func (m *Model) GetTaskById(id int) (task ITask, err error) {
 			})
 		}
 
-		return NewTask(m, taskData.Id, taskData.Idx, fields), err
+		var modelStatus ModelStatus
+
+		for _, status := range m.statuses {
+			if status.Id == taskData.Status {
+				modelStatus = status
+			}
+		}
+
+		return NewTask(m, modelStatus, taskData.Id, taskData.Idx, fields), err
 	}
 
 	return task, ErrTaskNotFound

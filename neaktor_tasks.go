@@ -22,6 +22,7 @@ type TaskField struct {
 
 type Task struct {
 	model  *Model
+	status ModelStatus
 	id     int
 	idx    string
 	fields []TaskField
@@ -33,6 +34,7 @@ var ErrTaskFieldNotFound = errors.New("TASK_FIELD_NOT_FOUND")
 type ITask interface {
 	GetId() int
 	GetIdx() string
+	GetStatus() ModelStatus
 	GetField(modelField ModelField) (taskField TaskField, err error)
 	GetCustomField(modelField ModelField) (taskField TaskField, err error)
 	UpdateFields(fields []TaskField) error
@@ -40,9 +42,10 @@ type ITask interface {
 	AddComment(message string) error
 }
 
-func NewTask(model *Model, id int, idx string, fields []TaskField) ITask {
+func NewTask(model *Model, status ModelStatus, id int, idx string, fields []TaskField) ITask {
 	return &Task{
 		model:  model,
+		status: status,
 		id:     id,
 		idx:    idx,
 		fields: fields,
@@ -55,6 +58,10 @@ func (t *Task) GetId() int {
 
 func (t *Task) GetIdx() string {
 	return t.idx
+}
+
+func (t *Task) GetStatus() ModelStatus {
+	return t.status
 }
 
 func (t *Task) GetField(modelField ModelField) (taskField TaskField, err error) {
