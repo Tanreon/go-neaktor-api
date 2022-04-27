@@ -527,7 +527,30 @@ func (m *Model) GetTasksByStatus(status ModelStatus) (tasks []ITask, err error) 
 		for _, taskData := range tasksResponse.Data {
 			fields := make([]TaskField, 0)
 
+			var startDate time.Time
+			var endDate time.Time
+			var statusClosedDate time.Time
+
 			for _, field := range taskData.Fields {
+				if strings.EqualFold(field.Id, "start") && field.Value != nil {
+					startDate, err = time.Parse("02-01-2006T15:04:05", field.Value.(string))
+					if err != nil {
+						return tasks, fmt.Errorf("task start parse error: %w", err)
+					}
+				}
+				if strings.EqualFold(field.Id, "end") && field.Value != nil {
+					endDate, err = time.Parse("02-01-2006T15:04:05", field.Value.(string))
+					if err != nil {
+						return tasks, fmt.Errorf("task end parse error: %w", err)
+					}
+				}
+				if strings.EqualFold(field.Id, "statusClosedDate") && field.Value != nil {
+					statusClosedDate, err = time.Parse("02-01-2006T15:04:05", field.Value.(string))
+					if err != nil {
+						return tasks, fmt.Errorf("task status closed parse error: %w", err)
+					}
+				}
+
 				fields = append(fields, TaskField{
 					ModelField: m.fields[field.Id],
 					Value:      field.Value,
@@ -543,7 +566,7 @@ func (m *Model) GetTasksByStatus(status ModelStatus) (tasks []ITask, err error) 
 				}
 			}
 
-			tasks = append(tasks, NewTask(m, modelStatus, taskData.Id, taskData.Idx, fields))
+			tasks = append(tasks, NewTask(m, modelStatus, taskData.Id, taskData.Idx, startDate, endDate, statusClosedDate, fields))
 		}
 
 		//
@@ -653,7 +676,30 @@ func (m *Model) GetTasksByStatusAndFields(status ModelStatus, fields []TaskField
 		for _, taskData := range tasksResponse.Data {
 			fields := make([]TaskField, 0)
 
+			var startDate time.Time
+			var endDate time.Time
+			var statusClosedDate time.Time
+
 			for _, field := range taskData.Fields {
+				if strings.EqualFold(field.Id, "start") && field.Value != nil {
+					startDate, err = time.Parse("02-01-2006T15:04:05", field.Value.(string))
+					if err != nil {
+						return tasks, fmt.Errorf("task start parse error: %w", err)
+					}
+				}
+				if strings.EqualFold(field.Id, "end") && field.Value != nil {
+					endDate, err = time.Parse("02-01-2006T15:04:05", field.Value.(string))
+					if err != nil {
+						return tasks, fmt.Errorf("task end parse error: %w", err)
+					}
+				}
+				if strings.EqualFold(field.Id, "statusClosedDate") && field.Value != nil {
+					statusClosedDate, err = time.Parse("02-01-2006T15:04:05", field.Value.(string))
+					if err != nil {
+						return tasks, fmt.Errorf("task status closed parse error: %w", err)
+					}
+				}
+
 				fields = append(fields, TaskField{
 					ModelField: m.fields[field.Id],
 					Value:      field.Value,
@@ -669,7 +715,7 @@ func (m *Model) GetTasksByStatusAndFields(status ModelStatus, fields []TaskField
 				}
 			}
 
-			tasks = append(tasks, NewTask(m, modelStatus, taskData.Id, taskData.Idx, fields))
+			tasks = append(tasks, NewTask(m, modelStatus, taskData.Id, taskData.Idx, startDate, endDate, statusClosedDate, fields))
 		}
 
 		if tasksResponse.Total < 50 {
@@ -772,7 +818,30 @@ func (m *Model) GetTasksByFields(fields []TaskField) (tasks []ITask, err error) 
 		for _, taskData := range tasksResponse.Data {
 			fields := make([]TaskField, 0)
 
+			var startDate time.Time
+			var endDate time.Time
+			var statusClosedDate time.Time
+
 			for _, field := range taskData.Fields {
+				if strings.EqualFold(field.Id, "start") && field.Value != nil {
+					startDate, err = time.Parse("02-01-2006T15:04:05", field.Value.(string))
+					if err != nil {
+						return tasks, fmt.Errorf("task start parse error: %w", err)
+					}
+				}
+				if strings.EqualFold(field.Id, "end") && field.Value != nil {
+					endDate, err = time.Parse("02-01-2006T15:04:05", field.Value.(string))
+					if err != nil {
+						return tasks, fmt.Errorf("task end parse error: %w", err)
+					}
+				}
+				if strings.EqualFold(field.Id, "statusClosedDate") && field.Value != nil {
+					statusClosedDate, err = time.Parse("02-01-2006T15:04:05", field.Value.(string))
+					if err != nil {
+						return tasks, fmt.Errorf("task status closed parse error: %w", err)
+					}
+				}
+
 				fields = append(fields, TaskField{
 					ModelField: m.fields[field.Id],
 					Value:      field.Value,
@@ -788,7 +857,7 @@ func (m *Model) GetTasksByFields(fields []TaskField) (tasks []ITask, err error) 
 				}
 			}
 
-			tasks = append(tasks, NewTask(m, modelStatus, taskData.Id, taskData.Idx, fields))
+			tasks = append(tasks, NewTask(m, modelStatus, taskData.Id, taskData.Idx, startDate, endDate, statusClosedDate, fields))
 		}
 
 		if tasksResponse.Total < 50 {
@@ -851,7 +920,30 @@ func (m *Model) GetTaskById(id int) (task ITask, err error) {
 	for _, taskData := range tasksResponse {
 		fields := make([]TaskField, 0)
 
+		var startDate time.Time
+		var endDate time.Time
+		var statusClosedDate time.Time
+
 		for _, field := range taskData.Fields {
+			if strings.EqualFold(field.Id, "start") && field.Value != nil {
+				startDate, err = time.Parse("02-01-2006T15:04:05", field.Value.(string))
+				if err != nil {
+					return task, fmt.Errorf("task start parse error: %w", err)
+				}
+			}
+			if strings.EqualFold(field.Id, "end") && field.Value != nil {
+				endDate, err = time.Parse("02-01-2006T15:04:05", field.Value.(string))
+				if err != nil {
+					return task, fmt.Errorf("task end parse error: %w", err)
+				}
+			}
+			if strings.EqualFold(field.Id, "statusClosedDate") && field.Value != nil {
+				statusClosedDate, err = time.Parse("02-01-2006T15:04:05", field.Value.(string))
+				if err != nil {
+					return task, fmt.Errorf("task status closed parse error: %w", err)
+				}
+			}
+
 			fields = append(fields, TaskField{
 				ModelField: m.fields[field.Id],
 				Value:      field.Value,
@@ -867,7 +959,7 @@ func (m *Model) GetTaskById(id int) (task ITask, err error) {
 			}
 		}
 
-		return NewTask(m, modelStatus, taskData.Id, taskData.Idx, fields), err
+		return NewTask(m, modelStatus, taskData.Id, taskData.Idx, startDate, endDate, statusClosedDate, fields), err
 	}
 
 	return task, ErrTaskNotFound

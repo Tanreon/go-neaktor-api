@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	HttpRunner "github.com/Tanreon/go-http-runner"
 	log "github.com/sirupsen/logrus"
@@ -21,11 +22,14 @@ type TaskField struct {
 }
 
 type Task struct {
-	model  *Model
-	status ModelStatus
-	id     int
-	idx    string
-	fields []TaskField
+	model            *Model
+	status           ModelStatus
+	id               int
+	idx              string
+	startDate        time.Time
+	endDate          time.Time
+	statusClosedDate time.Time
+	fields           []TaskField
 }
 
 var ErrTaskNotFound = errors.New("TASK_NOT_FOUND")
@@ -34,6 +38,9 @@ var ErrTaskFieldNotFound = errors.New("TASK_FIELD_NOT_FOUND")
 type ITask interface {
 	GetId() int
 	GetIdx() string
+	GetStartDate() time.Time
+	GetEndDate() time.Time
+	GetStatusClosedDate() time.Time
 	GetStatus() ModelStatus
 	GetField(modelField ModelField) (taskField TaskField, err error)
 	GetCustomField(modelField ModelField) (taskField TaskField, err error)
@@ -42,13 +49,16 @@ type ITask interface {
 	AddComment(message string) error
 }
 
-func NewTask(model *Model, status ModelStatus, id int, idx string, fields []TaskField) ITask {
+func NewTask(model *Model, status ModelStatus, id int, idx string, startDate, endDate, statusClosedDate time.Time, fields []TaskField) ITask {
 	return &Task{
-		model:  model,
-		status: status,
-		id:     id,
-		idx:    idx,
-		fields: fields,
+		model:            model,
+		status:           status,
+		id:               id,
+		idx:              idx,
+		startDate:        startDate,
+		endDate:          endDate,
+		statusClosedDate: statusClosedDate,
+		fields:           fields,
 	}
 }
 
@@ -58,6 +68,18 @@ func (t *Task) GetId() int {
 
 func (t *Task) GetIdx() string {
 	return t.idx
+}
+
+func (t *Task) GetStartDate() time.Time {
+	return t.startDate
+}
+
+func (t *Task) GetEndDate() time.Time {
+	return t.endDate
+}
+
+func (t *Task) GetStatusClosedDate() time.Time {
+	return t.statusClosedDate
 }
 
 func (t *Task) GetStatus() ModelStatus {
