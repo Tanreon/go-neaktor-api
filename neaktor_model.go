@@ -211,7 +211,7 @@ func (m *Model) GetCustomFieldOptionId(field ModelField, value string) (optionId
 
 	// request second
 
-	jsonRequestData := HttpRunner.NewJsonRequestData(fmt.Sprintf(API_SERVER+"/v1/customfields/%s", field.Id))
+	jsonRequestData := HttpRunner.NewJsonRequestOptions(fmt.Sprintf(API_SERVER+"/v1/customfields/%s", field.Id))
 	jsonRequestData.SetHeaders(map[string]string{
 		"Authorization": m.neaktor.token,
 	})
@@ -296,7 +296,7 @@ func (m *Model) GetCustomFieldValue(field ModelField, optionId string) (value st
 
 	// request second
 
-	jsonRequestData := HttpRunner.NewJsonRequestData(fmt.Sprintf(API_SERVER+"/v1/customfields/%s", field.Id))
+	jsonRequestData := HttpRunner.NewJsonRequestOptions(fmt.Sprintf(API_SERVER+"/v1/customfields/%s", field.Id))
 	jsonRequestData.SetHeaders(map[string]string{
 		"Authorization": m.neaktor.token,
 	})
@@ -377,7 +377,7 @@ func (m *Model) GetAssignee(status ModelStatus, name string) (assignee ModelAssi
 
 	// request second
 
-	jsonRequestData := HttpRunner.NewJsonRequestData(fmt.Sprintf(API_SERVER+"/v1/taskmodels/%s/%s/routings", m.id, status.Id))
+	jsonRequestData := HttpRunner.NewJsonRequestOptions(fmt.Sprintf(API_SERVER+"/v1/taskmodels/%s/%s/routings", m.id, status.Id))
 	jsonRequestData.SetHeaders(map[string]string{
 		"Authorization": m.neaktor.token,
 	})
@@ -505,7 +505,7 @@ func (m *Model) GetTasksByStatus(status ModelStatus) (tasks []ITask, err error) 
 	for page := 0; page < maxPages; page++ {
 		m.neaktor.apiLimiter.Take()
 
-		jsonRequestData := HttpRunner.NewJsonRequestData(fmt.Sprintf(API_SERVER+"/v1/tasks?model_id=%s&status_id=%s&size=%d&page=%d", m.id, status.Id, limit, page))
+		jsonRequestData := HttpRunner.NewJsonRequestOptions(fmt.Sprintf(API_SERVER+"/v1/tasks?model_id=%s&status_id=%s&size=%d&page=%d", m.id, status.Id, limit, page))
 		jsonRequestData.SetHeaders(map[string]string{
 			"Authorization": m.neaktor.token,
 		})
@@ -654,7 +654,7 @@ func (m *Model) GetTasksByStatusAndFields(status ModelStatus, fields []TaskField
 	for {
 		m.neaktor.apiLimiter.Take()
 
-		jsonRequestData := HttpRunner.NewJsonRequestData(fmt.Sprintf(API_SERVER+"/v1/tasks?model_id=%s&status_id=%s&%s&size=50&page=%d", m.id, status.Id, values.Encode(), page))
+		jsonRequestData := HttpRunner.NewJsonRequestOptions(fmt.Sprintf(API_SERVER+"/v1/tasks?model_id=%s&status_id=%s&%s&size=50&page=%d", m.id, status.Id, values.Encode(), page))
 		jsonRequestData.SetHeaders(map[string]string{
 			"Authorization": m.neaktor.token,
 		})
@@ -796,7 +796,7 @@ func (m *Model) GetTasksByFields(fields []TaskField) (tasks []ITask, err error) 
 	for {
 		m.neaktor.apiLimiter.Take()
 
-		jsonRequestData := HttpRunner.NewJsonRequestData(fmt.Sprintf(API_SERVER+"/v1/tasks?model_id=%s&%s&size=50&page=%d", m.id, values.Encode(), page))
+		jsonRequestData := HttpRunner.NewJsonRequestOptions(fmt.Sprintf(API_SERVER+"/v1/tasks?model_id=%s&%s&size=50&page=%d", m.id, values.Encode(), page))
 		jsonRequestData.SetHeaders(map[string]string{
 			"Authorization": m.neaktor.token,
 		})
@@ -898,7 +898,7 @@ func (m *Model) GetTaskById(id int) (task ITask, err error) {
 
 	m.neaktor.apiLimiter.Take()
 
-	jsonRequestData := HttpRunner.NewJsonRequestData(fmt.Sprintf(API_SERVER+"/v1/tasks/%d", id))
+	jsonRequestData := HttpRunner.NewJsonRequestOptions(fmt.Sprintf(API_SERVER+"/v1/tasks/%d", id))
 	jsonRequestData.SetHeaders(map[string]string{
 		"Authorization": m.neaktor.token,
 	})
@@ -1012,7 +1012,7 @@ func (m *Model) CreateTask(assignee ModelAssignee, fields []TaskField) (task ITa
 		return task, fmt.Errorf("marshaling error: %w", err)
 	}
 
-	jsonRequestData := HttpRunner.NewJsonRequestData(fmt.Sprintf(API_SERVER+"/v1/tasks/%s", m.id))
+	jsonRequestData := HttpRunner.NewJsonRequestOptions(fmt.Sprintf(API_SERVER+"/v1/tasks/%s", m.id))
 	jsonRequestData.SetHeaders(map[string]string{
 		"Authorization": m.neaktor.token,
 	})

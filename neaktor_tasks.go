@@ -155,7 +155,7 @@ func (t *Task) UpdateFields(fields []TaskField) error {
 		return fmt.Errorf("marshaling error: %w", err)
 	}
 
-	jsonRequestData := HttpRunner.NewJsonRequestData(fmt.Sprintf(API_SERVER+"/v1/tasks/%d", t.id))
+	jsonRequestData := HttpRunner.NewJsonRequestOptions(fmt.Sprintf(API_SERVER+"/v1/tasks/%d", t.id))
 	jsonRequestData.SetHeaders(map[string]string{
 		"Authorization": t.model.neaktor.token,
 	})
@@ -206,7 +206,7 @@ func (t *Task) UpdateStatus(status ModelStatus) error {
 		return fmt.Errorf("marshaling error: %w", err)
 	}
 
-	jsonRequestData := HttpRunner.NewJsonRequestData(fmt.Sprintf(API_SERVER+"/v1/tasks/%d/status/change", t.id))
+	jsonRequestData := HttpRunner.NewJsonRequestOptions(fmt.Sprintf(API_SERVER+"/v1/tasks/%d/status/change", t.id))
 	jsonRequestData.SetHeaders(map[string]string{
 		"Authorization": t.model.neaktor.token,
 	})
@@ -248,7 +248,7 @@ func (t *Task) AddComment(message string) error {
 		return fmt.Errorf("marshaling error: %w", err)
 	}
 
-	jsonRequestData := HttpRunner.NewJsonRequestData(fmt.Sprintf(API_SERVER+"/v1/comments/%d", t.id))
+	jsonRequestData := HttpRunner.NewJsonRequestOptions(fmt.Sprintf(API_SERVER+"/v1/comments/%d", t.id))
 	jsonRequestData.SetHeaders(map[string]string{
 		"Authorization": t.model.neaktor.token,
 	})

@@ -83,7 +83,7 @@ func (n *Neaktor) RefreshToken(clientId, clientSecret, refreshToken string) (err
 		Scope        string `json:"scope"`
 	}
 
-	formRequestData := HttpRunner.NewFormRequestData("https://api.neaktor.com/oauth/token")
+	formRequestData := HttpRunner.NewFormRequestOptions("https://api.neaktor.com/oauth/token")
 	formRequestData.SetValues(map[string]string{
 		"grant_type":    "refresh_token",
 		"redirect_uri":  "https://redirectUri.com",
@@ -171,7 +171,7 @@ func (n *Neaktor) GetModelByTitle(title string) (model IModel, err error) {
 
 	n.apiLimiter.Take()
 
-	jsonRequestData := HttpRunner.NewJsonRequestData(API_SERVER + "/v1/taskmodels?size=100")
+	jsonRequestData := HttpRunner.NewJsonRequestOptions(API_SERVER + "/v1/taskmodels?size=100")
 	jsonRequestData.SetHeaders(map[string]string{
 		"Authorization": n.token,
 	})
