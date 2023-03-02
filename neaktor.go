@@ -83,8 +83,8 @@ func (n *Neaktor) RefreshToken(clientId, clientSecret, refreshToken string) (err
 		Scope        string `json:"scope"`
 	}
 
-	formRequestData := HttpRunner.NewFormRequestOptions("https://api.neaktor.com/oauth/token")
-	formRequestData.SetValues(map[string]string{
+	formRequestOptions := HttpRunner.NewFormRequestOptions("https://api.neaktor.com/oauth/token")
+	formRequestOptions.SetValues(map[string]string{
 		"grant_type":    "refresh_token",
 		"redirect_uri":  "https://redirectUri.com",
 		"client_id":     clientId,
@@ -92,9 +92,13 @@ func (n *Neaktor) RefreshToken(clientId, clientSecret, refreshToken string) (err
 		"refresh_token": refreshToken,
 	})
 
-	response, err := n.runner.PostForm(formRequestData)
+	response, err := n.runner.PostForm(formRequestOptions)
 	if err != nil {
 		return fmt.Errorf("/oauth/token response error: %w", err)
+	}
+	if response.StatusCode() >= 500 {
+		log.Debugf("response status code: %d", response.StatusCode())
+		return fmt.Errorf("service unavailable, code: %d", response.StatusCode())
 	}
 
 	var oauthTokenResponse OauthTokenResponse
@@ -171,14 +175,18 @@ func (n *Neaktor) GetModelByTitle(title string) (model IModel, err error) {
 
 	n.apiLimiter.Take()
 
-	jsonRequestData := HttpRunner.NewJsonRequestOptions(API_SERVER + "/v1/taskmodels?size=100")
-	jsonRequestData.SetHeaders(map[string]string{
+	jsonRequestOptions := HttpRunner.NewJsonRequestOptions(API_SERVER + "/v1/taskmodels?size=100")
+	jsonRequestOptions.SetHeaders(map[string]string{
 		"Authorization": n.token,
 	})
 
-	response, err := n.runner.GetJson(jsonRequestData)
+	response, err := n.runner.GetJson(jsonRequestOptions)
 	if err != nil {
 		return model, fmt.Errorf("/v1/taskmodels?size=100 response error: %w", err)
+	}
+	if response.StatusCode() >= 500 {
+		log.Debugf("response status code: %d", response.StatusCode())
+		return model, fmt.Errorf("service unavailable, code: %d", response.StatusCode())
 	}
 
 	var taskModelResponse TaskModelResponse

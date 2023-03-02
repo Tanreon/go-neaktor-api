@@ -155,15 +155,19 @@ func (t *Task) UpdateFields(fields []TaskField) error {
 		return fmt.Errorf("marshaling error: %w", err)
 	}
 
-	jsonRequestData := HttpRunner.NewJsonRequestOptions(fmt.Sprintf(API_SERVER+"/v1/tasks/%d", t.id))
-	jsonRequestData.SetHeaders(map[string]string{
+	jsonRequestOptions := HttpRunner.NewJsonRequestOptions(fmt.Sprintf(API_SERVER+"/v1/tasks/%d", t.id))
+	jsonRequestOptions.SetHeaders(map[string]string{
 		"Authorization": t.model.neaktor.token,
 	})
-	jsonRequestData.SetValue(updateTasksRequestBytes)
+	jsonRequestOptions.SetValue(updateTasksRequestBytes)
 
-	response, err := t.model.neaktor.runner.PutJson(jsonRequestData)
+	response, err := t.model.neaktor.runner.PutJson(jsonRequestOptions)
 	if err != nil {
 		return fmt.Errorf("/v1/tasks/%d response error: %w", t.id, err)
+	}
+	if response.StatusCode() >= 500 {
+		log.Debugf("response status code: %d", response.StatusCode())
+		return fmt.Errorf("service unavailable, code: %d", response.StatusCode())
 	}
 
 	var updateTasksResponse UpdateTasksResponse
@@ -206,15 +210,19 @@ func (t *Task) UpdateStatus(status ModelStatus) error {
 		return fmt.Errorf("marshaling error: %w", err)
 	}
 
-	jsonRequestData := HttpRunner.NewJsonRequestOptions(fmt.Sprintf(API_SERVER+"/v1/tasks/%d/status/change", t.id))
-	jsonRequestData.SetHeaders(map[string]string{
+	jsonRequestOptions := HttpRunner.NewJsonRequestOptions(fmt.Sprintf(API_SERVER+"/v1/tasks/%d/status/change", t.id))
+	jsonRequestOptions.SetHeaders(map[string]string{
 		"Authorization": t.model.neaktor.token,
 	})
-	jsonRequestData.SetValue(updateTaskStatusRequestBytes)
+	jsonRequestOptions.SetValue(updateTaskStatusRequestBytes)
 
-	response, err := t.model.neaktor.runner.PostJson(jsonRequestData)
+	response, err := t.model.neaktor.runner.PostJson(jsonRequestOptions)
 	if err != nil {
 		return fmt.Errorf("/v1/tasks/%d/status/change response error: %w", t.id, err)
+	}
+	if response.StatusCode() >= 500 {
+		log.Debugf("response status code: %d", response.StatusCode())
+		return fmt.Errorf("service unavailable, code: %d", response.StatusCode())
 	}
 
 	var updateTaskStatusResponse UpdateTaskStatusResponse
@@ -248,15 +256,19 @@ func (t *Task) AddComment(message string) error {
 		return fmt.Errorf("marshaling error: %w", err)
 	}
 
-	jsonRequestData := HttpRunner.NewJsonRequestOptions(fmt.Sprintf(API_SERVER+"/v1/comments/%d", t.id))
-	jsonRequestData.SetHeaders(map[string]string{
+	jsonRequestOptions := HttpRunner.NewJsonRequestOptions(fmt.Sprintf(API_SERVER+"/v1/comments/%d", t.id))
+	jsonRequestOptions.SetHeaders(map[string]string{
 		"Authorization": t.model.neaktor.token,
 	})
-	jsonRequestData.SetValue(createCommentToTaskRequestBytes)
+	jsonRequestOptions.SetValue(createCommentToTaskRequestBytes)
 
-	response, err := t.model.neaktor.runner.PostJson(jsonRequestData)
+	response, err := t.model.neaktor.runner.PostJson(jsonRequestOptions)
 	if err != nil {
 		return fmt.Errorf("/v1/comments/%d response error: %w", t.id, err)
+	}
+	if response.StatusCode() >= 500 {
+		log.Debugf("response status code: %d", response.StatusCode())
+		return fmt.Errorf("service unavailable, code: %d", response.StatusCode())
 	}
 
 	var createCommentToTaskResponse CreateCommentToTaskResponse
