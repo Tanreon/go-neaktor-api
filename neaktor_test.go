@@ -82,4 +82,57 @@ func TestNeaktorApi(t *testing.T) {
 			}
 		}
 	})
+
+	t.Run("MustNeaktorApi", func(t *testing.T) {
+		directDialOptions := NetworkRunner.NewDirectDialOptions()
+		directDialOptions.SetDialTimeout(120)
+		directDialOptions.SetRelayTimeout(60)
+		directDialer, err := NetworkRunner.NewDirectDialer(directDialOptions)
+		if err != nil {
+			t.Fatal(err)
+		}
+		runner, err := HttpRunner.NewDirectHttpRunner(directDialer)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		neaktor := NewNeaktor(&runner, "t1o2k3e4n5", 100)
+
+		model := neaktor.MustGetModelByTitle("Заказ")
+
+		searchModelStatus := model.MustGetStatus("новый заказ")
+		newModelStatus := model.MustGetStatus("ошибочный заказ")
+
+		emailModelField := model.MustGetField("email")
+		passwordModelField := model.MustGetField("пароль")
+
+		tasks := model.MustGetTasksByStatus(searchModelStatus)
+
+		for _, task := range tasks {
+			passwordTaskField := TaskField{
+				ModelField: passwordModelField,
+				Value:      "qwerty123",
+			}
+
+			emailTaskField := task.MustGetField(emailModelField)
+			emailTaskField.Value = "admin@gmail.com"
+
+			log.Printf("task id: %q, idx: %q, email field: %q", task.GetId(), task.GetIdx(), emailTaskField)
+
+			if strings.EqualFold(emailTaskField.Value.(string), "admin@google.com") {
+				log.Printf("updating fields")
+				task.MustUpdateFields([]TaskField{passwordTaskField, emailTaskField})
+
+				//
+
+				log.Printf("updating status")
+				task.MustUpdateStatus(newModelStatus)
+
+				//
+
+				log.Printf("adding comment")
+				task.MustAddComment("emailTaskField value fixed")
+			}
+		}
+	})
 }

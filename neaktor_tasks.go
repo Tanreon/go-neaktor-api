@@ -43,10 +43,15 @@ type ITask interface {
 	GetStatusClosedDate() time.Time
 	GetStatus() ModelStatus
 	GetField(modelField ModelField) (taskField TaskField, err error)
+	MustGetField(modelField ModelField) (taskField TaskField)
 	GetCustomField(modelField ModelField) (taskField TaskField, err error)
+	MustGetCustomField(modelField ModelField) (taskField TaskField)
 	UpdateFields(fields []TaskField) error
+	MustUpdateFields(fields []TaskField)
 	UpdateStatus(status ModelStatus) error
+	MustUpdateStatus(status ModelStatus)
 	AddComment(message string) error
+	MustAddComment(message string)
 }
 
 func NewTask(model *Model, status ModelStatus, id int, idx string, startDate, endDate, statusClosedDate time.Time, fields []TaskField) ITask {
@@ -96,6 +101,16 @@ func (t *Task) GetField(modelField ModelField) (taskField TaskField, err error) 
 	return taskField, ErrTaskFieldNotFound
 }
 
+func (t *Task) MustGetField(modelField ModelField) (taskField TaskField) {
+	var err error
+	taskField, err = t.GetCustomField(modelField)
+	if err != nil {
+		panic(err)
+	}
+
+	return taskField
+}
+
 func (t *Task) GetCustomField(modelField ModelField) (taskField TaskField, err error) {
 	for _, field := range t.fields {
 		if field.ModelField.Id == modelField.Id {
@@ -110,6 +125,16 @@ func (t *Task) GetCustomField(modelField ModelField) (taskField TaskField, err e
 	}
 
 	return taskField, ErrTaskFieldNotFound
+}
+
+func (t *Task) MustGetCustomField(modelField ModelField) (taskField TaskField) {
+	var err error
+	taskField, err = t.GetCustomField(modelField)
+	if err != nil {
+		panic(err)
+	}
+
+	return taskField
 }
 
 func (t *Task) UpdateFields(fields []TaskField) error {
@@ -182,6 +207,13 @@ func (t *Task) UpdateFields(fields []TaskField) error {
 	return err
 }
 
+func (t *Task) MustUpdateFields(fields []TaskField) {
+	var err error
+	if err = t.UpdateFields(fields); err != nil {
+		panic(err)
+	}
+}
+
 func (t *Task) UpdateStatus(status ModelStatus) error {
 	type UpdateTaskStatusRequestAssignee struct {
 		Id   int    `json:"id,omitempty"`
@@ -237,6 +269,13 @@ func (t *Task) UpdateStatus(status ModelStatus) error {
 	return err
 }
 
+func (t *Task) MustUpdateStatus(status ModelStatus) {
+	var err error
+	if err = t.UpdateStatus(status); err != nil {
+		panic(err)
+	}
+}
+
 func (t *Task) AddComment(message string) error {
 	type CreateCommentToTaskRequest struct {
 		Text string `json:"text"`
@@ -281,4 +320,11 @@ func (t *Task) AddComment(message string) error {
 	}
 
 	return err
+}
+
+func (t *Task) MustAddComment(message string) {
+	var err error
+	if err = t.AddComment(message); err != nil {
+		panic(err)
+	}
 }

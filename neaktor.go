@@ -51,6 +51,7 @@ type Neaktor struct {
 type INeaktor interface {
 	RefreshToken(clientId, clientSecret, refreshToken string) (err error)
 	GetModelByTitle(title string) (model IModel, err error)
+	MustGetModelByTitle(title string) (model IModel)
 }
 
 func NewNeaktor(runner *HttpRunner.IHttpRunner, apiToken string, apiLimit int) INeaktor {
@@ -232,4 +233,14 @@ func (n *Neaktor) GetModelByTitle(title string) (model IModel, err error) {
 	}
 
 	return model, ErrModelNotFound
+}
+
+func (n *Neaktor) MustGetModelByTitle(title string) (model IModel) {
+	var err error
+	model, err = n.GetModelByTitle(title)
+	if err != nil {
+		panic(err)
+	}
+
+	return model
 }

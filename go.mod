@@ -1,6 +1,6 @@
 module github.com/Tanreon/go-neaktor-api
 
-go 1.18
+go 1.20
 
 require (
 	github.com/Tanreon/go-http-runner v0.0.0-20221201091233-04e4e408272c

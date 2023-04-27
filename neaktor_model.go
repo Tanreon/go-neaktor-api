@@ -75,22 +75,35 @@ type IModel interface {
 	GetAllStatuses() (statuses map[string]ModelStatus)
 	GetAllFields() (fields map[string]ModelField)
 	GetStatuses(titles []string) (statuses map[string]ModelStatus, err error)
+	MustGetStatuses(titles []string) (statuses map[string]ModelStatus)
 	GetFields(titles []string) (fields map[string]ModelField, err error)
+	MustGetFields(titles []string) (fields map[string]ModelField)
 	GetStatus(title string) (status ModelStatus, err error)
+	MustGetStatus(title string) (status ModelStatus)
 	GetField(title string) (field ModelField, err error)
+	MustGetField(title string) (field ModelField)
 	GetCustomFieldOptionId(field ModelField, value string) (optionId string, err error)
+	MustGetCustomFieldOptionId(field ModelField, value string) (optionId string)
 	GetCustomFieldValue(field ModelField, optionId string) (value string, err error)
+	MustGetCustomFieldValue(field ModelField, optionId string) (value string)
 	GetAssignee(status ModelStatus, name string) (assignee ModelAssignee, err error)
+	MustGetAssignee(status ModelStatus, name string) (assignee ModelAssignee)
 	GetTasksByStatus(status ModelStatus) (tasks []ITask, err error)
+	MustGetTasksByStatus(status ModelStatus) (tasks []ITask)
 	GetTasksByStatuses(statuses []ModelStatus) (tasks []ITask, err error)
+	MustGetTasksByStatuses(statuses []ModelStatus) (tasks []ITask)
 	GetTasksByStatusAndFields(status ModelStatus, fields []TaskField) (tasks []ITask, err error)
+	MustGetTasksByStatusAndFields(status ModelStatus, fields []TaskField) (tasks []ITask)
 	GetTasksByFields(fields []TaskField) (tasks []ITask, err error)
+	MustGetTasksByFields(fields []TaskField) (tasks []ITask)
 	GetTaskById(id int) (task ITask, err error)
+	MustGetTaskById(id int) (task ITask)
 	IsTasksByStatusExists(status ModelStatus) (isExists bool, err error)
 	IsTasksByStatusesExists(statuses []ModelStatus) (isExists bool, err error)
 	IsTasksByStatusAndFieldsExists(status ModelStatus, fields []TaskField) (isExists bool, err error)
 	IsTasksByFieldsExists(fields []TaskField) (isExists bool, err error)
 	CreateTask(assignee ModelAssignee, fields []TaskField) (task ITask, err error)
+	MustCreateTask(assignee ModelAssignee, fields []TaskField) (task ITask)
 }
 
 func NewModel(neaktor *Neaktor, id string, statuses map[string]ModelStatus, fields map[string]ModelField) IModel {
@@ -136,6 +149,16 @@ func (m *Model) GetStatuses(titles []string) (statuses map[string]ModelStatus, e
 	return statuses, err
 }
 
+func (m *Model) MustGetStatuses(titles []string) (statuses map[string]ModelStatus) {
+	var err error
+	statuses, err = m.GetStatuses(titles)
+	if err != nil {
+		panic(err)
+	}
+
+	return statuses
+}
+
 func (m *Model) GetFields(titles []string) (fields map[string]ModelField, err error) {
 	fields = make(map[string]ModelField, 0)
 
@@ -154,6 +177,16 @@ func (m *Model) GetFields(titles []string) (fields map[string]ModelField, err er
 	return fields, err
 }
 
+func (m *Model) MustGetFields(titles []string) (fields map[string]ModelField) {
+	var err error
+	fields, err = m.GetFields(titles)
+	if err != nil {
+		panic(err)
+	}
+
+	return fields
+}
+
 func (m *Model) GetStatus(title string) (status ModelStatus, err error) {
 	for _, modelStatus := range m.statuses {
 		if strings.EqualFold(modelStatus.Name, title) {
@@ -164,6 +197,16 @@ func (m *Model) GetStatus(title string) (status ModelStatus, err error) {
 	return status, ErrModelStatusNotFound
 }
 
+func (m *Model) MustGetStatus(title string) (status ModelStatus) {
+	var err error
+	status, err = m.GetStatus(title)
+	if err != nil {
+		panic(err)
+	}
+
+	return status
+}
+
 func (m *Model) GetField(title string) (field ModelField, err error) {
 	for _, modelField := range m.fields {
 		if strings.EqualFold(modelField.Name, title) {
@@ -172,6 +215,16 @@ func (m *Model) GetField(title string) (field ModelField, err error) {
 	}
 
 	return field, ErrModelFieldNotFound
+}
+
+func (m *Model) MustGetField(title string) (field ModelField) {
+	var err error
+	field, err = m.GetField(title)
+	if err != nil {
+		panic(err)
+	}
+
+	return field
 }
 
 func (m *Model) GetCustomFieldOptionId(field ModelField, value string) (optionId string, err error) {
@@ -263,6 +316,16 @@ func (m *Model) GetCustomFieldOptionId(field ModelField, value string) (optionId
 	return optionId, ErrModelCustomFieldOptionNotFound
 }
 
+func (m *Model) MustGetCustomFieldOptionId(field ModelField, value string) (optionId string) {
+	var err error
+	optionId, err = m.GetCustomFieldOptionId(field, value)
+	if err != nil {
+		panic(err)
+	}
+
+	return optionId
+}
+
 func (m *Model) GetCustomFieldValue(field ModelField, optionId string) (value string, err error) {
 	type OptionsAvailableValues struct {
 		Id    string `json:"id"`
@@ -352,6 +415,16 @@ func (m *Model) GetCustomFieldValue(field ModelField, optionId string) (value st
 	return value, ErrModelCustomFieldValueNotFound
 }
 
+func (m *Model) MustGetCustomFieldValue(field ModelField, optionId string) (value string) {
+	var err error
+	value, err = m.GetCustomFieldValue(field, optionId)
+	if err != nil {
+		panic(err)
+	}
+
+	return value
+}
+
 func (m *Model) GetAssignee(status ModelStatus, name string) (assignee ModelAssignee, err error) {
 	type RoutingResponseAssignee struct {
 		Id   int    `json:"id"`
@@ -436,6 +509,16 @@ func (m *Model) GetAssignee(status ModelStatus, name string) (assignee ModelAssi
 	}
 
 	return assignee, ErrModelAssigneeNotFound
+}
+
+func (m *Model) MustGetAssignee(status ModelStatus, name string) (assignee ModelAssignee) {
+	var err error
+	assignee, err = m.GetAssignee(status, name)
+	if err != nil {
+		panic(err)
+	}
+
+	return assignee
 }
 
 //
@@ -593,6 +676,16 @@ func (m *Model) GetTasksByStatus(status ModelStatus) (tasks []ITask, err error) 
 	return tasks, err
 }
 
+func (m *Model) MustGetTasksByStatus(status ModelStatus) (tasks []ITask) {
+	var err error
+	tasks, err = m.GetTasksByStatus(status)
+	if err != nil {
+		panic(err)
+	}
+
+	return tasks
+}
+
 func (m *Model) GetTasksByStatuses(statuses []ModelStatus) (tasks []ITask, err error) {
 	for _, status := range statuses {
 		tasksByStatus, err := m.GetTasksByStatus(status)
@@ -604,6 +697,16 @@ func (m *Model) GetTasksByStatuses(statuses []ModelStatus) (tasks []ITask, err e
 	}
 
 	return tasks, err
+}
+
+func (m *Model) MustGetTasksByStatuses(statuses []ModelStatus) (tasks []ITask) {
+	var err error
+	tasks, err = m.GetTasksByStatuses(statuses)
+	if err != nil {
+		panic(err)
+	}
+
+	return tasks
 }
 
 func (m *Model) GetTasksByStatusAndFields(status ModelStatus, fields []TaskField) (tasks []ITask, err error) {
@@ -752,6 +855,16 @@ func (m *Model) GetTasksByStatusAndFields(status ModelStatus, fields []TaskField
 	return tasks, err
 }
 
+func (m *Model) MustGetTasksByStatusAndFields(status ModelStatus, fields []TaskField) (tasks []ITask) {
+	var err error
+	tasks, err = m.GetTasksByStatusAndFields(status, fields)
+	if err != nil {
+		panic(err)
+	}
+
+	return tasks
+}
+
 func (m *Model) GetTasksByFields(fields []TaskField) (tasks []ITask, err error) {
 	type DataField struct {
 		Id    string      `json:"id"`
@@ -898,6 +1011,16 @@ func (m *Model) GetTasksByFields(fields []TaskField) (tasks []ITask, err error) 
 	return tasks, nil
 }
 
+func (m *Model) MustGetTasksByFields(fields []TaskField) (tasks []ITask) {
+	var err error
+	tasks, err = m.GetTasksByFields(fields)
+	if err != nil {
+		panic(err)
+	}
+
+	return tasks
+}
+
 func (m *Model) GetTaskById(id int) (task ITask, err error) {
 	type TaskResponseField struct {
 		Id    string      `json:"id"`
@@ -993,6 +1116,16 @@ func (m *Model) GetTaskById(id int) (task ITask, err error) {
 	return task, ErrTaskNotFound
 }
 
+func (m *Model) MustGetTaskById(id int) (task ITask) {
+	var err error
+	task, err = m.GetTaskById(id)
+	if err != nil {
+		panic(err)
+	}
+
+	return task
+}
+
 func (m *Model) CreateTask(assignee ModelAssignee, fields []TaskField) (task ITask, err error) {
 	type CreateTaskRequestAssignee struct {
 		Id   int    `json:"id,omitempty"`
@@ -1067,4 +1200,14 @@ func (m *Model) CreateTask(assignee ModelAssignee, fields []TaskField) (task ITa
 	//
 
 	return m.GetTaskById(createTaskResponse.Id)
+}
+
+func (m *Model) MustCreateTask(assignee ModelAssignee, fields []TaskField) (task ITask) {
+	var err error
+	task, err = m.CreateTask(assignee, fields)
+	if err != nil {
+		panic(err)
+	}
+
+	return task
 }
