@@ -103,7 +103,7 @@ func (t *Task) GetField(modelField ModelField) (taskField TaskField, err error) 
 
 func (t *Task) MustGetField(modelField ModelField) (taskField TaskField) {
 	var err error
-	taskField, err = t.GetCustomField(modelField)
+	taskField, err = t.GetField(modelField)
 	if err != nil {
 		panic(err)
 	}
