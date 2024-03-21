@@ -42,7 +42,7 @@ type NeaktorErrorResponse struct {
 
 type Neaktor struct {
 	apiLimiter   ratelimit.Limiter
-	httpClient   *requrl.Request
+	httpClient   requrl.Request
 	refreshToken string
 	token        string
 
@@ -59,7 +59,7 @@ type INeaktor interface {
 	SetLogger(log *log.Logger)
 }
 
-func NewNeaktor(httpClient *requrl.Request, apiToken string, apiLimit int) INeaktor {
+func NewNeaktor(httpClient requrl.Request, apiToken string, apiLimit int) INeaktor {
 	return &Neaktor{
 		apiLimiter: ratelimit.New(apiLimit, ratelimit.Per(time.Minute)),
 		httpClient: httpClient,
@@ -71,7 +71,7 @@ func NewNeaktor(httpClient *requrl.Request, apiToken string, apiLimit int) INeak
 	}
 }
 
-func NewNeaktorByRefreshToken(httpClient *requrl.Request, refreshToken string, apiLimit int) INeaktor {
+func NewNeaktorByRefreshToken(httpClient requrl.Request, refreshToken string, apiLimit int) INeaktor {
 	return &Neaktor{
 		apiLimiter:   ratelimit.New(apiLimit, ratelimit.Per(time.Minute)),
 		httpClient:   httpClient,
@@ -106,7 +106,7 @@ func (n *Neaktor) RefreshToken(clientId, clientSecret, refreshToken string) (err
 	httpClient.Data.Add("client_secret", clientSecret)
 	httpClient.Data.Add("refresh_token", refreshToken)
 
-	response, err := requests.Post(mustUrlJoinPath(ApiServer, "oauth", "token"), httpClient)
+	response, err := requests.Post(mustUrlJoinPath(ApiServer, "oauth", "token"), &httpClient)
 	if err != nil {
 		return fmt.Errorf("/oauth/token request error: %w", err)
 	}
@@ -199,7 +199,7 @@ func (n *Neaktor) GetModelByTitle(title string) (model IModel, err error) {
 	httpClient.Params = requrl.NewParams()
 	httpClient.Params.Add("size", "100")
 
-	response, err := requests.Get(mustUrlJoinPath(ApiGateway, "taskmodels"), httpClient)
+	response, err := requests.Get(mustUrlJoinPath(ApiGateway, "taskmodels"), &httpClient)
 	if err != nil {
 		return model, fmt.Errorf("/v1/taskmodels request error: %w", err)
 	}

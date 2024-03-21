@@ -187,9 +187,9 @@ func (t *Task) UpdateFields(fields []TaskField) error {
 
 	httpClient.Body = string(updateTasksRequestBytes)
 
-	response, err := requests.Put(mustUrlJoinPath(ApiGateway, "tasks", strconv.Itoa(t.id)), httpClient)
+	response, err := requests.Put(mustUrlJoinPath(ApiGateway, "tasks", strconv.Itoa(t.id)), &httpClient)
 	if err != nil {
-		return fmt.Errorf("/v1/tasks/%d response error: %w", t.id, err)
+		return fmt.Errorf("/v1/tasks/%d request error: %w", t.id, err)
 	}
 
 	if response.StatusCode >= 500 {
@@ -251,9 +251,9 @@ func (t *Task) UpdateStatus(status ModelStatus) error {
 
 	httpClient.Body = string(updateTaskStatusRequestBytes)
 
-	response, err := requests.Post(mustUrlJoinPath(ApiGateway, "tasks", strconv.Itoa(t.id), "status", "change"), httpClient)
+	response, err := requests.Post(mustUrlJoinPath(ApiGateway, "tasks", strconv.Itoa(t.id), "status", "change"), &httpClient)
 	if err != nil {
-		return fmt.Errorf("/v1/tasks/%d/status/change response error: %w", t.id, err)
+		return fmt.Errorf("/v1/tasks/%d/status/change request error: %w", t.id, err)
 	}
 
 	if response.StatusCode >= 500 {
@@ -306,9 +306,9 @@ func (t *Task) AddComment(message string) error {
 
 	httpClient.Body = string(createCommentToTaskRequestBytes)
 
-	response, err := requests.Post(mustUrlJoinPath(ApiGateway, "comments", strconv.Itoa(t.id)), httpClient)
+	response, err := requests.Post(mustUrlJoinPath(ApiGateway, "comments", strconv.Itoa(t.id)), &httpClient)
 	if err != nil {
-		return fmt.Errorf("/v1/comments/%d response error: %w", t.id, err)
+		return fmt.Errorf("/v1/comments/%d request error: %w", t.id, err)
 	}
 
 	if response.StatusCode >= 500 {

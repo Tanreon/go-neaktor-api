@@ -10,7 +10,7 @@ import (
 
 func TestNeaktorApi(t *testing.T) {
 	t.Run("NeaktorApi", func(t *testing.T) {
-		neaktor := NewNeaktor(requrl.NewRequest(), "t1o2k3e4n5", 100)
+		neaktor := NewNeaktor(*requrl.NewRequest(), "t1o2k3e4n5", 100)
 
 		model, err := neaktor.GetModelByTitle("Заказ")
 		if err != nil {
@@ -72,7 +72,7 @@ func TestNeaktorApi(t *testing.T) {
 	})
 
 	t.Run("MustNeaktorApi", func(t *testing.T) {
-		neaktor := NewNeaktor(requrl.NewRequest(), "t1o2k3e4n5", 100)
+		neaktor := NewNeaktor(*requrl.NewRequest(), "t1o2k3e4n5", 100)
 
 		model := neaktor.MustGetModelByTitle("Заказ")
 

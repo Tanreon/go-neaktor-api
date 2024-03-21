@@ -268,7 +268,7 @@ func (m *Model) GetCustomFieldOptionId(field ModelField, value string) (optionId
 	httpClient.Headers = requrl.NewHeaders()
 	httpClient.Headers.Add("Authorization", m.neaktor.token)
 
-	response, err := requests.Get(mustUrlJoinPath(ApiGateway, "customfields", field.Id), httpClient)
+	response, err := requests.Get(mustUrlJoinPath(ApiGateway, "customfields", field.Id), &httpClient)
 	if err != nil {
 		return optionId, fmt.Errorf("/v1/customfields/%s request error: %w", field.Id, err)
 	}
@@ -368,7 +368,7 @@ func (m *Model) GetCustomFieldValue(field ModelField, optionId string) (value st
 	httpClient.Headers = requrl.NewHeaders()
 	httpClient.Headers.Add("Authorization", m.neaktor.token)
 
-	response, err := requests.Get(mustUrlJoinPath(ApiGateway, "customfields", field.Id), httpClient)
+	response, err := requests.Get(mustUrlJoinPath(ApiGateway, "customfields", field.Id), &httpClient)
 	if err != nil {
 		return value, fmt.Errorf("/v1/customfields/%s request error: %w", field.Id, err)
 	}
@@ -464,9 +464,9 @@ func (m *Model) GetAssignee(status ModelStatus, name string) (assignee ModelAssi
 	httpClient.Headers = requrl.NewHeaders()
 	httpClient.Headers.Add("Authorization", m.neaktor.token)
 
-	response, err := requests.Get(mustUrlJoinPath(ApiGateway, "taskmodels", m.id, status.Id, "routings"), httpClient)
+	response, err := requests.Get(mustUrlJoinPath(ApiGateway, "taskmodels", m.id, status.Id, "routings"), &httpClient)
 	if err != nil {
-		return assignee, fmt.Errorf("/v1/taskmodels/%s/%s/routings response error: %w", m.id, status.Id, err)
+		return assignee, fmt.Errorf("/v1/taskmodels/%s/%s/routings request error: %w", m.id, status.Id, err)
 	}
 
 	if response.StatusCode >= 500 {
@@ -613,9 +613,9 @@ func (m *Model) GetTasksByStatus(status ModelStatus) (tasks []ITask, err error) 
 		httpClient.Params.Add("size", strconv.Itoa(limit))
 		httpClient.Params.Add("page", strconv.Itoa(page))
 
-		response, err := requests.Get(mustUrlJoinPath(ApiGateway, "tasks"), httpClient)
+		response, err := requests.Get(mustUrlJoinPath(ApiGateway, "tasks"), &httpClient)
 		if err != nil {
-			return tasks, fmt.Errorf("/v1/tasks?model_id=%s&status_id=%s&size=%d&page=%d response error: %w", m.id, status.Id, limit, page, err)
+			return tasks, fmt.Errorf("/v1/tasks?model_id=%s&status_id=%s&size=%d&page=%d request error: %w", m.id, status.Id, limit, page, err)
 		}
 
 		if response.StatusCode >= 500 {
@@ -800,9 +800,9 @@ func (m *Model) GetTasksByStatusAndFields(status ModelStatus, fields []TaskField
 		httpClient.Params.Add("size", "50")
 		httpClient.Params.Add("page", strconv.Itoa(page))
 
-		response, err := requests.Get(mustUrlJoinPath(ApiGateway, "tasks"), httpClient)
+		response, err := requests.Get(mustUrlJoinPath(ApiGateway, "tasks"), &httpClient)
 		if err != nil {
-			return tasks, fmt.Errorf("/v1/tasks?model_id=%s&status_id=%s&%s&size=%d response error: %w", m.id, status.Id, otherParams.Encode(), page, err)
+			return tasks, fmt.Errorf("/v1/tasks?model_id=%s&status_id=%s&%s&size=%d request error: %w", m.id, status.Id, otherParams.Encode(), page, err)
 		}
 
 		if response.StatusCode >= 500 {
@@ -969,9 +969,9 @@ func (m *Model) GetTasksByFields(fields []TaskField) (tasks []ITask, err error) 
 		httpClient.Params.Add("size", "50")
 		httpClient.Params.Add("page", strconv.Itoa(page))
 
-		response, err := requests.Get(mustUrlJoinPath(ApiGateway, "tasks"), httpClient)
+		response, err := requests.Get(mustUrlJoinPath(ApiGateway, "tasks"), &httpClient)
 		if err != nil {
-			return tasks, fmt.Errorf("/v1/tasks?model_id=%s&%s&size=50&page=%d response error: %w", m.id, otherParams.Encode(), page, err)
+			return tasks, fmt.Errorf("/v1/tasks?model_id=%s&%s&size=50&page=%d request error: %w", m.id, otherParams.Encode(), page, err)
 		}
 
 		if response.StatusCode >= 500 {
@@ -1086,9 +1086,9 @@ func (m *Model) GetTaskById(id int) (task ITask, err error) {
 	httpClient.Headers = requrl.NewHeaders()
 	httpClient.Headers.Add("Authorization", m.neaktor.token)
 
-	response, err := requests.Get(mustUrlJoinPath(ApiGateway, "tasks", strconv.Itoa(id)), httpClient)
+	response, err := requests.Get(mustUrlJoinPath(ApiGateway, "tasks", strconv.Itoa(id)), &httpClient)
 	if err != nil {
-		return task, fmt.Errorf("/v1/tasks/%d response error: %w", id, err)
+		return task, fmt.Errorf("/v1/tasks/%d request error: %w", id, err)
 	}
 
 	if response.StatusCode >= 500 {
@@ -1217,9 +1217,9 @@ func (m *Model) CreateTask(assignee ModelAssignee, fields []TaskField) (task ITa
 
 	httpClient.Body = string(createTaskRequestBytes)
 
-	response, err := requests.Post(mustUrlJoinPath(ApiGateway, "tasks", m.id), httpClient)
+	response, err := requests.Post(mustUrlJoinPath(ApiGateway, "tasks", m.id), &httpClient)
 	if err != nil {
-		return task, fmt.Errorf("/v1/tasks/%s response error: %w", m.id, err)
+		return task, fmt.Errorf("/v1/tasks/%s request error: %w", m.id, err)
 	}
 
 	if response.StatusCode >= 500 {
