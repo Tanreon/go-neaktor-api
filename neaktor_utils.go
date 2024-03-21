@@ -3,6 +3,8 @@ package neaktor_api
 import (
 	"fmt"
 	"strings"
+
+	neturl "net/url"
 )
 
 func parseErrorCode(code string, message string) error {
@@ -23,4 +25,22 @@ func parseErrorCode(code string, message string) error {
 	}
 
 	return ErrCodeUnknown
+}
+
+func mustUrlJoinPath(base string, path ...string) string {
+	url, err := neturl.JoinPath(base, path...)
+	if err != nil {
+		panic(err)
+	}
+
+	return url
+}
+
+func mustParseUrl(rawUrl string) *neturl.URL {
+	parsedUrl, err := neturl.Parse(rawUrl)
+	if err != nil {
+		panic(err)
+	}
+
+	return parsedUrl
 }

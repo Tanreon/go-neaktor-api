@@ -7,14 +7,16 @@ import (
 	"sync"
 	"time"
 
+	"github.com/charmbracelet/log"
+	"github.com/wangluozhe/requests"
 	"go.uber.org/ratelimit"
 
-	HttpRunner "github.com/Tanreon/go-http-runner"
-	log "github.com/sirupsen/logrus"
+	requrl "github.com/wangluozhe/requests/url"
 )
 
-const API_SERVER = "https://api.neaktor.com"
-const MODEL_CACHE_TIME = time.Minute * 30
+const ApiServer = "https://api.neaktor.com"
+const ApiGateway = ApiServer + "/v1"
+const ModelCacheTime = time.Minute * 30
 
 var ErrCodeUnknown = errors.New("UNKNOWN_ERROR")
 var ErrCode403 = errors.New("403")
@@ -40,9 +42,11 @@ type NeaktorErrorResponse struct {
 
 type Neaktor struct {
 	apiLimiter   ratelimit.Limiter
-	runner       HttpRunner.IHttpRunner
+	httpClient   *requrl.Request
 	refreshToken string
 	token        string
+
+	log *log.Logger
 
 	modelCacheLock sync.Mutex
 	modelCacheMap  map[string]ModelCache
@@ -52,26 +56,35 @@ type INeaktor interface {
 	RefreshToken(clientId, clientSecret, refreshToken string) (err error)
 	GetModelByTitle(title string) (model IModel, err error)
 	MustGetModelByTitle(title string) (model IModel)
+	SetLogger(log *log.Logger)
 }
 
-func NewNeaktor(runner *HttpRunner.IHttpRunner, apiToken string, apiLimit int) INeaktor {
+func NewNeaktor(httpClient *requrl.Request, apiToken string, apiLimit int) INeaktor {
 	return &Neaktor{
-		apiLimiter:     ratelimit.New(apiLimit, ratelimit.Per(time.Minute)),
-		runner:         *runner,
-		token:          apiToken,
+		apiLimiter: ratelimit.New(apiLimit, ratelimit.Per(time.Minute)),
+		httpClient: httpClient,
+		token:      apiToken,
+		log:        log.WithPrefix("neaktor"),
+
 		modelCacheLock: sync.Mutex{},
 		modelCacheMap:  make(map[string]ModelCache, 0),
 	}
 }
 
-func NewNeaktorByRefreshToken(runner *HttpRunner.IHttpRunner, refreshToken string, apiLimit int) INeaktor {
+func NewNeaktorByRefreshToken(httpClient *requrl.Request, refreshToken string, apiLimit int) INeaktor {
 	return &Neaktor{
-		apiLimiter:     ratelimit.New(apiLimit, ratelimit.Per(time.Minute)),
-		runner:         *runner,
-		refreshToken:   refreshToken,
+		apiLimiter:   ratelimit.New(apiLimit, ratelimit.Per(time.Minute)),
+		httpClient:   httpClient,
+		refreshToken: refreshToken,
+		log:          log.WithPrefix("neaktor"),
+
 		modelCacheLock: sync.Mutex{},
 		modelCacheMap:  make(map[string]ModelCache, 0),
 	}
+}
+
+func (n *Neaktor) SetLogger(logger *log.Logger) {
+	n.log = logger
 }
 
 func (n *Neaktor) RefreshToken(clientId, clientSecret, refreshToken string) (err error) { // FIXME временная мера из-за бага в самом неакторе, приходится таким образом доставать ключ
@@ -84,31 +97,33 @@ func (n *Neaktor) RefreshToken(clientId, clientSecret, refreshToken string) (err
 		Scope        string `json:"scope"`
 	}
 
-	formRequestOptions := HttpRunner.NewFormRequestOptions("https://api.neaktor.com/oauth/token")
-	formRequestOptions.SetValues(map[string]string{
-		"grant_type":    "refresh_token",
-		"redirect_uri":  "https://redirectUri.com",
-		"client_id":     clientId,
-		"client_secret": clientSecret,
-		"refresh_token": refreshToken,
-	})
+	httpClient := n.httpClient
 
-	response, err := n.runner.PostForm(formRequestOptions)
+	httpClient.Data = requrl.NewData()
+	httpClient.Data.Add("grant_type", "refresh_token")
+	httpClient.Data.Add("redirect_uri", "https://redirectUri.com")
+	httpClient.Data.Add("client_id", clientId)
+	httpClient.Data.Add("client_secret", clientSecret)
+	httpClient.Data.Add("refresh_token", refreshToken)
+
+	response, err := requests.Post(mustUrlJoinPath(ApiServer, "oauth", "token"), httpClient)
 	if err != nil {
-		return fmt.Errorf("/oauth/token response error: %w", err)
+		return fmt.Errorf("/oauth/token request error: %w", err)
 	}
-	if response.StatusCode() >= 500 {
-		log.Debugf("response status code: %d", response.StatusCode())
-		return fmt.Errorf("service unavailable, code: %d", response.StatusCode())
+
+	if response.StatusCode >= 500 {
+		n.log.Debugf("response status code: %d", response.StatusCode)
+		return fmt.Errorf("service unavailable, code: %d", response.StatusCode)
 	}
 
 	var oauthTokenResponse OauthTokenResponse
-	if err := json.Unmarshal(response.Body(), &oauthTokenResponse); err != nil {
-		log.Debugf("response code: %d, response body: %v", response.StatusCode(), string(response.Body()))
+	if err := json.Unmarshal(response.Content, &oauthTokenResponse); err != nil {
+		n.log.Debugf("response code: %d, response body: %v", response.StatusCode, response.Text)
 		return fmt.Errorf("unmarshaling error: %w", err)
 	}
+
 	if len(oauthTokenResponse.Code) > 0 {
-		parseErrorCode(oauthTokenResponse.Code, oauthTokenResponse.Message)
+		return parseErrorCode(oauthTokenResponse.Code, oauthTokenResponse.Message)
 	}
 
 	if len(oauthTokenResponse.AccessToken) <= 0 {
@@ -165,7 +180,7 @@ func (n *Neaktor) GetModelByTitle(title string) (model IModel, err error) {
 	// cache first
 
 	if cachedModel, present := n.modelCacheMap[title]; present {
-		if time.Now().Before(cachedModel.lastUpdatedAt.Add(MODEL_CACHE_TIME)) {
+		if time.Now().Before(cachedModel.lastUpdatedAt.Add(ModelCacheTime)) {
 			return cachedModel.model, err
 		}
 
@@ -176,25 +191,30 @@ func (n *Neaktor) GetModelByTitle(title string) (model IModel, err error) {
 
 	n.apiLimiter.Take()
 
-	jsonRequestOptions := HttpRunner.NewJsonRequestOptions(API_SERVER + "/v1/taskmodels?size=100")
-	jsonRequestOptions.SetHeaders(map[string]string{
-		"Authorization": n.token,
-	})
+	httpClient := n.httpClient
 
-	response, err := n.runner.GetJson(jsonRequestOptions)
+	httpClient.Headers = requrl.NewHeaders()
+	httpClient.Headers.Add("Authorization", n.token)
+
+	httpClient.Params = requrl.NewParams()
+	httpClient.Params.Add("size", "100")
+
+	response, err := requests.Get(mustUrlJoinPath(ApiGateway, "taskmodels"), httpClient)
 	if err != nil {
-		return model, fmt.Errorf("/v1/taskmodels?size=100 response error: %w", err)
+		return model, fmt.Errorf("/v1/taskmodels request error: %w", err)
 	}
-	if response.StatusCode() >= 500 {
-		log.Debugf("response status code: %d", response.StatusCode())
-		return model, fmt.Errorf("service unavailable, code: %d", response.StatusCode())
+
+	if response.StatusCode >= 500 {
+		n.log.Debugf("response status code: %d", response.StatusCode)
+		return model, fmt.Errorf("service unavailable, code: %d", response.StatusCode)
 	}
 
 	var taskModelResponse TaskModelResponse
-	if err := json.Unmarshal(response.Body(), &taskModelResponse); err != nil {
-		log.Debugf("response code: %d, response body: %v", response.StatusCode(), string(response.Body()))
+	if err := json.Unmarshal(response.Content, &taskModelResponse); err != nil {
+		n.log.Debugf("response code: %d, response body: %v", response.StatusCode, response.Text)
 		return model, fmt.Errorf("unmarshaling error: %w", err)
 	}
+
 	if len(taskModelResponse.Code) > 0 {
 		return model, parseErrorCode(taskModelResponse.Code, taskModelResponse.Message)
 	}

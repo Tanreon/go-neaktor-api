@@ -4,14 +4,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/wangluozhe/requests"
+	requrl "github.com/wangluozhe/requests/url"
 	"math"
-	"net/url"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
-
-	HttpRunner "github.com/Tanreon/go-http-runner"
-	log "github.com/sirupsen/logrus"
 )
 
 type ModelField struct {
@@ -251,7 +250,7 @@ func (m *Model) GetCustomFieldOptionId(field ModelField, value string) (optionId
 	// cache first
 
 	if cachedModelCustomField, present := m.modelCustomFieldCacheMap[field.Id]; present {
-		if time.Now().Before(cachedModelCustomField.lastUpdatedAt.Add(MODEL_CACHE_TIME)) {
+		if time.Now().Before(cachedModelCustomField.lastUpdatedAt.Add(ModelCacheTime)) {
 			for _, customFieldOption := range cachedModelCustomField.customFieldOptions {
 				if customFieldOption.value == value {
 					return customFieldOption.id, err
@@ -264,23 +263,24 @@ func (m *Model) GetCustomFieldOptionId(field ModelField, value string) (optionId
 
 	// request second
 
-	jsonRequestOptions := HttpRunner.NewJsonRequestOptions(fmt.Sprintf(API_SERVER+"/v1/customfields/%s", field.Id))
-	jsonRequestOptions.SetHeaders(map[string]string{
-		"Authorization": m.neaktor.token,
-	})
+	httpClient := m.neaktor.httpClient
 
-	response, err := m.neaktor.runner.GetJson(jsonRequestOptions)
+	httpClient.Headers = requrl.NewHeaders()
+	httpClient.Headers.Add("Authorization", m.neaktor.token)
+
+	response, err := requests.Get(mustUrlJoinPath(ApiGateway, "customfields", field.Id), httpClient)
 	if err != nil {
-		return optionId, fmt.Errorf("/v1/customfields/%s response error: %w", field.Id, err)
+		return optionId, fmt.Errorf("/v1/customfields/%s request error: %w", field.Id, err)
 	}
-	if response.StatusCode() >= 500 {
-		log.Debugf("response status code: %d", response.StatusCode())
-		return optionId, fmt.Errorf("service unavailable, code: %d", response.StatusCode())
+
+	if response.StatusCode >= 500 {
+		m.neaktor.log.Debugf("response status code: %d", response.StatusCode)
+		return optionId, fmt.Errorf("service unavailable, code: %d", response.StatusCode)
 	}
 
 	var customFieldsResponses []CustomFieldsResponse
-	if err := json.Unmarshal(response.Body(), &customFieldsResponses); err != nil {
-		log.Debugf("response code: %d, response body: %v", response.StatusCode(), string(response.Body()))
+	if err := json.Unmarshal(response.Content, &customFieldsResponses); err != nil {
+		m.neaktor.log.Debugf("response code: %d, response body: %v", response.StatusCode, response.Text)
 		return optionId, fmt.Errorf("unmarshaling error: %w", err)
 	}
 	//if len(createTaskResponse.Code) > 0 {
@@ -350,7 +350,7 @@ func (m *Model) GetCustomFieldValue(field ModelField, optionId string) (value st
 	// cache first
 
 	if cachedModelCustomField, present := m.modelCustomFieldCacheMap[field.Id]; present {
-		if time.Now().Before(cachedModelCustomField.lastUpdatedAt.Add(MODEL_CACHE_TIME)) {
+		if time.Now().Before(cachedModelCustomField.lastUpdatedAt.Add(ModelCacheTime)) {
 			for _, customFieldOption := range cachedModelCustomField.customFieldOptions {
 				if customFieldOption.id == optionId {
 					return customFieldOption.value, err
@@ -363,23 +363,24 @@ func (m *Model) GetCustomFieldValue(field ModelField, optionId string) (value st
 
 	// request second
 
-	jsonRequestOptions := HttpRunner.NewJsonRequestOptions(fmt.Sprintf(API_SERVER+"/v1/customfields/%s", field.Id))
-	jsonRequestOptions.SetHeaders(map[string]string{
-		"Authorization": m.neaktor.token,
-	})
+	httpClient := m.neaktor.httpClient
 
-	response, err := m.neaktor.runner.GetJson(jsonRequestOptions)
+	httpClient.Headers = requrl.NewHeaders()
+	httpClient.Headers.Add("Authorization", m.neaktor.token)
+
+	response, err := requests.Get(mustUrlJoinPath(ApiGateway, "customfields", field.Id), httpClient)
 	if err != nil {
-		return value, fmt.Errorf("/v1/customfields/%s response error: %w", field.Id, err)
+		return value, fmt.Errorf("/v1/customfields/%s request error: %w", field.Id, err)
 	}
-	if response.StatusCode() >= 500 {
-		log.Debugf("response status code: %d", response.StatusCode())
-		return value, fmt.Errorf("service unavailable, code: %d", response.StatusCode())
+
+	if response.StatusCode >= 500 {
+		m.neaktor.log.Debugf("response status code: %d", response.StatusCode)
+		return value, fmt.Errorf("service unavailable, code: %d", response.StatusCode)
 	}
 
 	var customFieldsResponses []CustomFieldsResponse
-	if err := json.Unmarshal(response.Body(), &customFieldsResponses); err != nil {
-		log.Debugf("response code: %d, response body: %v", response.StatusCode(), string(response.Body()))
+	if err := json.Unmarshal(response.Content, &customFieldsResponses); err != nil {
+		m.neaktor.log.Debugf("response code: %d, response body: %v", response.StatusCode, response.Text)
 		return value, fmt.Errorf("unmarshaling error: %w", err)
 	}
 	//if len(createTaskResponse.Code) > 0 {
@@ -445,7 +446,7 @@ func (m *Model) GetAssignee(status ModelStatus, name string) (assignee ModelAssi
 	// cache first
 
 	if cachedModelAssignee, present := m.modelAssigneeCacheMap[status.Id]; present {
-		if time.Now().Before(cachedModelAssignee.lastUpdatedAt.Add(MODEL_CACHE_TIME)) {
+		if time.Now().Before(cachedModelAssignee.lastUpdatedAt.Add(ModelCacheTime)) {
 			for _, modelAssignee := range cachedModelAssignee.modelAssignees {
 				if modelAssignee.name == name {
 					return modelAssignee, err
@@ -458,23 +459,24 @@ func (m *Model) GetAssignee(status ModelStatus, name string) (assignee ModelAssi
 
 	// request second
 
-	jsonRequestOptions := HttpRunner.NewJsonRequestOptions(fmt.Sprintf(API_SERVER+"/v1/taskmodels/%s/%s/routings", m.id, status.Id))
-	jsonRequestOptions.SetHeaders(map[string]string{
-		"Authorization": m.neaktor.token,
-	})
+	httpClient := m.neaktor.httpClient
 
-	response, err := m.neaktor.runner.GetJson(jsonRequestOptions)
+	httpClient.Headers = requrl.NewHeaders()
+	httpClient.Headers.Add("Authorization", m.neaktor.token)
+
+	response, err := requests.Get(mustUrlJoinPath(ApiGateway, "taskmodels", m.id, status.Id, "routings"), httpClient)
 	if err != nil {
 		return assignee, fmt.Errorf("/v1/taskmodels/%s/%s/routings response error: %w", m.id, status.Id, err)
 	}
-	if response.StatusCode() >= 500 {
-		log.Debugf("response status code: %d", response.StatusCode())
-		return assignee, fmt.Errorf("service unavailable, code: %d", response.StatusCode())
+
+	if response.StatusCode >= 500 {
+		m.neaktor.log.Debugf("response status code: %d", response.StatusCode)
+		return assignee, fmt.Errorf("service unavailable, code: %d", response.StatusCode)
 	}
 
 	var routingResponses []RoutingResponse
-	if err := json.Unmarshal(response.Body(), &routingResponses); err != nil {
-		log.Debugf("response code: %d, response body: %v", response.StatusCode(), string(response.Body()))
+	if err := json.Unmarshal(response.Content, &routingResponses); err != nil {
+		m.neaktor.log.Debugf("response code: %d, response body: %v", response.StatusCode, response.Text)
 		return assignee, fmt.Errorf("unmarshaling error: %w", err)
 	}
 	//if len(createTaskResponse.Code) > 0 {
@@ -600,23 +602,30 @@ func (m *Model) GetTasksByStatus(status ModelStatus) (tasks []ITask, err error) 
 	for page := 0; page < maxPages; page++ {
 		m.neaktor.apiLimiter.Take()
 
-		jsonRequestOptions := HttpRunner.NewJsonRequestOptions(fmt.Sprintf(API_SERVER+"/v1/tasks?model_id=%s&status_id=%s&size=%d&page=%d", m.id, status.Id, limit, page))
-		jsonRequestOptions.SetHeaders(map[string]string{
-			"Authorization": m.neaktor.token,
-		})
+		httpClient := m.neaktor.httpClient
 
-		response, err := m.neaktor.runner.GetJson(jsonRequestOptions)
+		httpClient.Headers = requrl.NewHeaders()
+		httpClient.Headers.Add("Authorization", m.neaktor.token)
+
+		httpClient.Params = requrl.NewParams()
+		httpClient.Params.Add("model_id", m.id)
+		httpClient.Params.Add("status_id", status.Id)
+		httpClient.Params.Add("size", strconv.Itoa(limit))
+		httpClient.Params.Add("page", strconv.Itoa(page))
+
+		response, err := requests.Get(mustUrlJoinPath(ApiGateway, "tasks"), httpClient)
 		if err != nil {
 			return tasks, fmt.Errorf("/v1/tasks?model_id=%s&status_id=%s&size=%d&page=%d response error: %w", m.id, status.Id, limit, page, err)
 		}
-		if response.StatusCode() >= 500 {
-			log.Debugf("response status code: %d", response.StatusCode())
-			return tasks, fmt.Errorf("service unavailable, code: %d", response.StatusCode())
+
+		if response.StatusCode >= 500 {
+			m.neaktor.log.Debugf("response status code: %d", response.StatusCode)
+			return tasks, fmt.Errorf("service unavailable, code: %d", response.StatusCode)
 		}
 
 		var tasksResponse TasksResponse
-		if err := json.Unmarshal(response.Body(), &tasksResponse); err != nil {
-			log.Debugf("response code: %d, response body: %v", response.StatusCode(), string(response.Body()))
+		if err := json.Unmarshal(response.Content, &tasksResponse); err != nil {
+			m.neaktor.log.Debugf("response code: %d, response body: %v", response.StatusCode, response.Text)
 			return tasks, fmt.Errorf("unmarshaling error: %w", err)
 		}
 		if len(tasksResponse.Code) > 0 {
@@ -744,7 +753,7 @@ func (m *Model) GetTasksByStatusAndFields(status ModelStatus, fields []TaskField
 
 	//
 
-	values := url.Values{}
+	otherParams := requrl.NewParams()
 	for _, field := range fields {
 		var value string
 		switch field.Value.(type) {
@@ -765,7 +774,7 @@ func (m *Model) GetTasksByStatusAndFields(status ModelStatus, fields []TaskField
 		case int64:
 			value = fmt.Sprintf("%d", field.Value.(int64))
 		}
-		values.Add(field.ModelField.Id, value)
+		otherParams.Add(field.ModelField.Id, value)
 	}
 
 	page := 0
@@ -773,23 +782,37 @@ func (m *Model) GetTasksByStatusAndFields(status ModelStatus, fields []TaskField
 	for {
 		m.neaktor.apiLimiter.Take()
 
-		jsonRequestOptions := HttpRunner.NewJsonRequestOptions(fmt.Sprintf(API_SERVER+"/v1/tasks?model_id=%s&status_id=%s&%s&size=50&page=%d", m.id, status.Id, values.Encode(), page))
-		jsonRequestOptions.SetHeaders(map[string]string{
-			"Authorization": m.neaktor.token,
-		})
+		httpClient := m.neaktor.httpClient
 
-		response, err := m.neaktor.runner.GetJson(jsonRequestOptions)
-		if err != nil {
-			return tasks, fmt.Errorf("/v1/tasks?model_id=%s&status_id=%s&%s&size=%d response error: %w", m.id, status.Id, values.Encode(), page, err)
+		httpClient.Headers = requrl.NewHeaders()
+		httpClient.Headers.Add("Authorization", m.neaktor.token)
+
+		httpClient.Params = requrl.NewParams()
+
+		for k, v := range otherParams.Values() {
+			for _, e := range v {
+				httpClient.Params.Add(k, e)
+			}
 		}
-		if response.StatusCode() >= 500 {
-			log.Debugf("response status code: %d", response.StatusCode())
-			return tasks, fmt.Errorf("service unavailable, code: %d", response.StatusCode())
+
+		httpClient.Params.Add("model_id", m.id)
+		httpClient.Params.Add("status_id", status.Id)
+		httpClient.Params.Add("size", "50")
+		httpClient.Params.Add("page", strconv.Itoa(page))
+
+		response, err := requests.Get(mustUrlJoinPath(ApiGateway, "tasks"), httpClient)
+		if err != nil {
+			return tasks, fmt.Errorf("/v1/tasks?model_id=%s&status_id=%s&%s&size=%d response error: %w", m.id, status.Id, otherParams.Encode(), page, err)
+		}
+
+		if response.StatusCode >= 500 {
+			m.neaktor.log.Debugf("response status code: %d", response.StatusCode)
+			return tasks, fmt.Errorf("service unavailable, code: %d", response.StatusCode)
 		}
 
 		var tasksResponse TasksResponse
-		if err := json.Unmarshal(response.Body(), &tasksResponse); err != nil {
-			log.Debugf("response code: %d, response body: %v", response.StatusCode(), string(response.Body()))
+		if err := json.Unmarshal(response.Content, &tasksResponse); err != nil {
+			m.neaktor.log.Debugf("response code: %d, response body: %v", response.StatusCode, response.Text)
 			return tasks, fmt.Errorf("unmarshaling error: %w", err)
 		}
 		if len(tasksResponse.Code) > 0 {
@@ -900,7 +923,7 @@ func (m *Model) GetTasksByFields(fields []TaskField) (tasks []ITask, err error) 
 
 	//
 
-	values := url.Values{}
+	otherParams := requrl.NewParams()
 	for _, field := range fields {
 		var value string
 		switch field.Value.(type) {
@@ -921,7 +944,7 @@ func (m *Model) GetTasksByFields(fields []TaskField) (tasks []ITask, err error) 
 		case int64:
 			value = fmt.Sprintf("%d", field.Value.(int64))
 		}
-		values.Add(field.ModelField.Id, value)
+		otherParams.Add(field.ModelField.Id, value)
 	}
 
 	page := 0
@@ -929,23 +952,36 @@ func (m *Model) GetTasksByFields(fields []TaskField) (tasks []ITask, err error) 
 	for {
 		m.neaktor.apiLimiter.Take()
 
-		jsonRequestOptions := HttpRunner.NewJsonRequestOptions(fmt.Sprintf(API_SERVER+"/v1/tasks?model_id=%s&%s&size=50&page=%d", m.id, values.Encode(), page))
-		jsonRequestOptions.SetHeaders(map[string]string{
-			"Authorization": m.neaktor.token,
-		})
+		httpClient := m.neaktor.httpClient
 
-		response, err := m.neaktor.runner.GetJson(jsonRequestOptions)
-		if err != nil {
-			return tasks, fmt.Errorf("/v1/tasks?model_id=%s&%s&size=50&page=%d response error: %w", m.id, values.Encode(), page, err)
+		httpClient.Headers = requrl.NewHeaders()
+		httpClient.Headers.Add("Authorization", m.neaktor.token)
+
+		httpClient.Params = requrl.NewParams()
+
+		for k, v := range otherParams.Values() {
+			for _, e := range v {
+				httpClient.Params.Add(k, e)
+			}
 		}
-		if response.StatusCode() >= 500 {
-			log.Debugf("response status code: %d", response.StatusCode())
-			return tasks, fmt.Errorf("service unavailable, code: %d", response.StatusCode())
+
+		httpClient.Params.Add("model_id", m.id)
+		httpClient.Params.Add("size", "50")
+		httpClient.Params.Add("page", strconv.Itoa(page))
+
+		response, err := requests.Get(mustUrlJoinPath(ApiGateway, "tasks"), httpClient)
+		if err != nil {
+			return tasks, fmt.Errorf("/v1/tasks?model_id=%s&%s&size=50&page=%d response error: %w", m.id, otherParams.Encode(), page, err)
+		}
+
+		if response.StatusCode >= 500 {
+			m.neaktor.log.Debugf("response status code: %d", response.StatusCode)
+			return tasks, fmt.Errorf("service unavailable, code: %d", response.StatusCode)
 		}
 
 		var tasksResponse TasksResponse
-		if err := json.Unmarshal(response.Body(), &tasksResponse); err != nil {
-			log.Debugf("response code: %d, response body: %v", response.StatusCode(), string(response.Body()))
+		if err := json.Unmarshal(response.Content, &tasksResponse); err != nil {
+			m.neaktor.log.Debugf("response code: %d, response body: %v", response.StatusCode, response.Text)
 			return tasks, fmt.Errorf("unmarshaling error: %w", err)
 		}
 		if len(tasksResponse.Code) > 0 {
@@ -1045,23 +1081,24 @@ func (m *Model) GetTaskById(id int) (task ITask, err error) {
 
 	m.neaktor.apiLimiter.Take()
 
-	jsonRequestOptions := HttpRunner.NewJsonRequestOptions(fmt.Sprintf(API_SERVER+"/v1/tasks/%d", id))
-	jsonRequestOptions.SetHeaders(map[string]string{
-		"Authorization": m.neaktor.token,
-	})
+	httpClient := m.neaktor.httpClient
 
-	response, err := m.neaktor.runner.GetJson(jsonRequestOptions)
+	httpClient.Headers = requrl.NewHeaders()
+	httpClient.Headers.Add("Authorization", m.neaktor.token)
+
+	response, err := requests.Get(mustUrlJoinPath(ApiGateway, "tasks", strconv.Itoa(id)), httpClient)
 	if err != nil {
 		return task, fmt.Errorf("/v1/tasks/%d response error: %w", id, err)
 	}
-	if response.StatusCode() >= 500 {
-		log.Debugf("response status code: %d", response.StatusCode())
-		return task, fmt.Errorf("service unavailable, code: %d", response.StatusCode())
+
+	if response.StatusCode >= 500 {
+		m.neaktor.log.Debugf("response status code: %d", response.StatusCode)
+		return task, fmt.Errorf("service unavailable, code: %d", response.StatusCode)
 	}
 
 	var tasksResponse []TaskResponse
-	if err := json.Unmarshal(response.Body(), &tasksResponse); err != nil {
-		log.Debugf("response code: %d, response body: %v", response.StatusCode(), string(response.Body()))
+	if err := json.Unmarshal(response.Content, &tasksResponse); err != nil {
+		m.neaktor.log.Debugf("response code: %d, response body: %v", response.StatusCode, response.Text)
 		return task, fmt.Errorf("unmarshaling error: %w", err)
 	}
 	//if len(tasksResponse.Code) > 0 {
@@ -1173,24 +1210,26 @@ func (m *Model) CreateTask(assignee ModelAssignee, fields []TaskField) (task ITa
 		return task, fmt.Errorf("marshaling error: %w", err)
 	}
 
-	jsonRequestOptions := HttpRunner.NewJsonRequestOptions(fmt.Sprintf(API_SERVER+"/v1/tasks/%s", m.id))
-	jsonRequestOptions.SetHeaders(map[string]string{
-		"Authorization": m.neaktor.token,
-	})
-	jsonRequestOptions.SetValue(createTaskRequestBytes)
+	httpClient := m.neaktor.httpClient
 
-	response, err := m.neaktor.runner.PostJson(jsonRequestOptions)
+	httpClient.Headers = requrl.NewHeaders()
+	httpClient.Headers.Add("Authorization", m.neaktor.token)
+
+	httpClient.Body = string(createTaskRequestBytes)
+
+	response, err := requests.Post(mustUrlJoinPath(ApiGateway, "tasks", m.id), httpClient)
 	if err != nil {
 		return task, fmt.Errorf("/v1/tasks/%s response error: %w", m.id, err)
 	}
-	if response.StatusCode() >= 500 {
-		log.Debugf("response status code: %d", response.StatusCode())
-		return task, fmt.Errorf("service unavailable, code: %d", response.StatusCode())
+
+	if response.StatusCode >= 500 {
+		m.neaktor.log.Debugf("response status code: %d", response.StatusCode)
+		return task, fmt.Errorf("service unavailable, code: %d", response.StatusCode)
 	}
 
 	var createTaskResponse CreateTaskResponse
-	if err := json.Unmarshal(response.Body(), &createTaskResponse); err != nil {
-		log.Debugf("response code: %d, response body: %v", response.StatusCode(), string(response.Body()))
+	if err := json.Unmarshal(response.Content, &createTaskResponse); err != nil {
+		m.neaktor.log.Debugf("response code: %d, response body: %v", response.StatusCode, response.Text)
 		return task, fmt.Errorf("unmarshaling error: %w", err)
 	}
 	if len(createTaskResponse.Code) > 0 {

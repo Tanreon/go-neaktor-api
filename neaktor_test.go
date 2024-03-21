@@ -1,28 +1,16 @@
 package neaktor_api
 
 import (
+	"log"
 	"strings"
 	"testing"
 
-	HttpRunner "github.com/Tanreon/go-http-runner"
-	NetworkRunner "github.com/Tanreon/go-network-runner"
-	log "github.com/sirupsen/logrus"
+	requrl "github.com/wangluozhe/requests/url"
 )
 
 func TestNeaktorApi(t *testing.T) {
 	t.Run("NeaktorApi", func(t *testing.T) {
-		directDialOptions := NetworkRunner.NewDirectDialOptions()
-		directDialOptions.SetDialTimeout(120)
-		directDialOptions.SetRelayTimeout(60)
-		directDialer, err := NetworkRunner.NewDirectDialer(directDialOptions)
-		if err != nil {
-			t.Fatal(err)
-		}
-		runner, err := HttpRunner.NewDirectHttpRunner(directDialer)
-		if err != nil {
-			t.Fatal(err)
-		}
-		neaktor := NewNeaktor(&runner, "t1o2k3e4n5", 100)
+		neaktor := NewNeaktor(requrl.NewRequest(), "t1o2k3e4n5", 100)
 
 		model, err := neaktor.GetModelByTitle("Заказ")
 		if err != nil {
@@ -84,19 +72,7 @@ func TestNeaktorApi(t *testing.T) {
 	})
 
 	t.Run("MustNeaktorApi", func(t *testing.T) {
-		directDialOptions := NetworkRunner.NewDirectDialOptions()
-		directDialOptions.SetDialTimeout(120)
-		directDialOptions.SetRelayTimeout(60)
-		directDialer, err := NetworkRunner.NewDirectDialer(directDialOptions)
-		if err != nil {
-			t.Fatal(err)
-		}
-		runner, err := HttpRunner.NewDirectHttpRunner(directDialer)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		neaktor := NewNeaktor(&runner, "t1o2k3e4n5", 100)
+		neaktor := NewNeaktor(requrl.NewRequest(), "t1o2k3e4n5", 100)
 
 		model := neaktor.MustGetModelByTitle("Заказ")
 
